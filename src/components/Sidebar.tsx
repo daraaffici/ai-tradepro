@@ -130,7 +130,7 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-purple-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg"
+        className="lg:hidden fixed top-3 left-3 z-[99999] bg-purple-600 text-white px-4 py-2 rounded-xl font-bold shadow-2xl"
       >
         ☰ Menu
       </button>
