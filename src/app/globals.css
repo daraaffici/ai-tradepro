@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Light Theme */
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #f3f4f6;
+  --border: #d1d5db;
+  --muted: #6b7280;
+}
+
+/* Dark Theme */
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0f172a;
+  --border: #27272a;
+  --muted: #a1a1aa;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+
+  background: var(--background);
+  color: var(--foreground);
+
+  transition: background 0.3s ease;
+  transition: color 0.3s ease;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #f3f4f6;
+  --input: #ffffff;
+  --border: #d1d5db;
+  --muted: #6b7280;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0f172a;
+  --input: #18181b;
+  --border: #27272a;
+  --muted: #a1a1aa;
+}

@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  watchlists Watchlist[]
+  portfolios Portfolio[]
+  trades Trade[]
+}
+
+model Watchlist {
+  id        Int      @id @default(autoincrement())
+  symbol    String
+  userId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Portfolio {
+  id        Int      @id @default(autoincrement())
+  symbol    String
+  quantity  Float
+  buyPrice  Float
+  userId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Trade {
+  id        Int      @id @default(autoincrement())
+  symbol    String
+  type      String
+  entry     Float
+  takeProfit Float
+  stopLoss  Float
+  status    String   @default("Open")
+  userId    Int
+  createdAt DateTime @default(now())
+  lotSize    Float    @default(1)
+  closePrice Float?
+  profit     Float?
+
+  user User @relation(fields: [userId], references: [id])
+}

@@ -1,0 +1,10 @@
+-- CreateTable
+CREATE TABLE "Portfolio" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "symbol" TEXT NOT NULL,
+    "quantity" REAL NOT NULL,
+    "buyPrice" REAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Portfolio_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
