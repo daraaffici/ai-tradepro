@@ -7,32 +7,10 @@ const supportedSymbols = [
   "BTCUSDT",
   "ETHUSDT",
   "SOLUSDT",
-  "BNBUSDT",
-  "XRPUSDT",
-  "ADAUSDT",
-  "DOGEUSDT",
-  "AVAXUSDT",
-  "LINKUSDT",
-  "SUIUSDT",
-  "EURUSD",
-  "GBPUSD",
-  "USDJPY",
-  "AUDUSD",
-  "USDCAD",
-  "USDCHF",
-  "NZDUSD",
-  "EURJPY",
-  "GBPJPY",
-  "EURGBP",
-  "XAUUSD",
-  "XAGUSD",
   "AAPL",
   "TSLA",
   "NVDA",
   "MSFT",
-  "GOOGL",
-  "AMZN",
-  "META",
   "AMD",
 ];
 
@@ -57,12 +35,9 @@ export default function Header() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-8">
+    <div className="pt-12 lg:pt-0 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-8">
       <div>
-        <h1
-          className="text-3xl font-bold"
-          style={{ color: "var(--foreground)" }}
-        >
+        <h1 className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
           Welcome Back 👋
         </h1>
 
@@ -73,7 +48,7 @@ export default function Header() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-auto">
+      <div className="flex w-full lg:w-auto">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -81,7 +56,7 @@ export default function Header() {
             if (e.key === "Enter") handleSearch();
           }}
           placeholder="Search Markets..."
-          className="bg-[var(--input)] border border-[var(--border)] px-4 py-2 rounded-lg w-full lg:w-72"
+          className="bg-[var(--input)] border border-[var(--border)] px-4 py-3 rounded-l-lg w-full lg:w-72"
           style={{
             backgroundColor: "var(--card)",
             borderColor: "var(--border)",
@@ -91,7 +66,7 @@ export default function Header() {
 
         <button
           onClick={handleSearch}
-          className="bg-purple-600 px-4 py-2 rounded-lg text-white"
+          className="bg-purple-600 px-4 py-3 rounded-r-lg text-white font-bold"
         >
           Search
         </button>

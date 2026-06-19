@@ -38,7 +38,7 @@ export default function Sidebar() {
 
   const SidebarContent = (
     <aside
-      className="w-64 min-h-screen border-r p-4 overflow-y-auto"
+      className="w-64 h-screen border-r p-4 overflow-y-auto"
       style={{
         backgroundColor: "var(--card)",
         borderColor: "var(--border)",
@@ -71,11 +71,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full overflow-hidden border border-[var(--border)] flex items-center justify-center">
             {avatar ? (
-              <img
-                src={avatar}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+              <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <span className="text-2xl">👤</span>
             )}
@@ -106,9 +102,7 @@ export default function Sidebar() {
                   ? "flex items-center gap-3 bg-purple-700 text-white px-4 py-3 rounded-xl font-semibold"
                   : "flex items-center gap-3 px-4 py-3 rounded-xl transition hover:bg-zinc-700/20"
               }
-              style={{
-                color: active ? "#ffffff" : "var(--foreground)",
-              }}
+              style={{ color: active ? "#ffffff" : "var(--foreground)" }}
             >
               <span>{item.icon}</span>
               <span>{item.name}</span>
@@ -116,13 +110,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      <div className="mt-8 bg-gradient-to-r from-purple-700 to-pink-600 p-4 rounded-xl text-white">
-        <p className="font-bold">Pro Dashboard</p>
-        <p className="text-sm mt-2">
-          Live markets, AI signals, and trading journal.
-        </p>
-      </div>
     </aside>
   );
 
@@ -130,17 +117,16 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-[99999] bg-purple-600 text-white px-4 py-2 rounded-xl font-bold shadow-2xl"
+        className="lg:hidden fixed top-3 left-3 z-[99999] bg-purple-600 text-white px-3 py-2 rounded-xl font-bold shadow-2xl"
       >
-        ☰ Menu
+        ☰
       </button>
 
       <div className="hidden lg:block">{SidebarContent}</div>
 
       {open && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-[99999] flex">
           <div>{SidebarContent}</div>
-
           <button
             aria-label="Close menu"
             onClick={closeMenu}
