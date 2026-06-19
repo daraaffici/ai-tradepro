@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+  const url = new URL(req.url);
+  const { searchParams } = url;
   const symbol = searchParams.get("symbol") || "BTCUSDT";
+
+  const baseUrl = `${url.protocol}//${url.host}`;
   const apiKey = process.env.TWELVE_DATA_API_KEY;
 
   try {
     if (["BTCUSDT", "ETHUSDT", "SOLUSDT"].includes(symbol)) {
       const res = await fetch(
-        `http://localhost:3000/api/market/price?symbol=${symbol}`,
+        `${baseUrl}/api/market/price?symbol=${symbol}`,
         { cache: "no-store" }
       );
 
@@ -17,6 +20,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         symbol,
         price: Number(data.price || 0),
+        change: Number(data.change || 0),
       });
     }
 
@@ -31,7 +35,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         symbol,
         price: data.price ? Number(data.price) : 0,
-        raw: data,
+        change: 0,
       });
     }
 
@@ -46,6 +50,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         symbol,
         price: data.price ? Number(data.price) : 0,
+        change: 0,
       });
     }
 
@@ -60,6 +65,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         symbol,
         price: data.price ? Number(data.price) : 0,
+        change: 0,
       });
     }
 

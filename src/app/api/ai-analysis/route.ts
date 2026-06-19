@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+  const url = new URL(req.url);
+  const { searchParams } = url;
   const symbol = searchParams.get("symbol") || "BTCUSDT";
+
+  const baseUrl = `${url.protocol}//${url.host}`;
 
   try {
     const res = await fetch(
-      `http://localhost:3000/api/market/all-price?symbol=${symbol}`,
+      `${baseUrl}/api/market/all-price?symbol=${symbol}`,
       { cache: "no-store" }
     );
 
@@ -14,6 +17,16 @@ export async function GET(req: Request) {
 
     const price = Number(market.price || 0);
     const change = Number(market.change || 0);
+
+    if (!price) {
+      return NextResponse.json(
+        {
+          error: "No market price",
+          message: `No valid price found for ${symbol}`,
+        },
+        { status: 500 }
+      );
+    }
 
     let trend = "Sideways";
     let recommendation = "HOLD";
@@ -44,7 +57,6 @@ export async function GET(req: Request) {
 
     const support = Number((price * 0.98).toFixed(2));
     const resistance = Number((price * 1.03).toFixed(2));
-
     const entry = price;
 
     const takeProfit =
