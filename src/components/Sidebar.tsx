@@ -22,6 +22,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [avatar, setAvatar] = useState("");
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -31,20 +32,33 @@ export default function Sidebar() {
     if (savedAvatar) setAvatar(savedAvatar);
   }, []);
 
-  return (
+  function closeMenu() {
+    setOpen(false);
+  }
+
+  const SidebarContent = (
     <aside
-      className="hidden lg:block w-64 min-h-screen border-r p-4"
+      className="w-64 min-h-screen border-r p-4 overflow-y-auto"
       style={{
         backgroundColor: "var(--card)",
         borderColor: "var(--border)",
         color: "var(--foreground)",
       }}
     >
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">AI TradePro</h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          AI Market Analysis
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">AI TradePro</h1>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            AI Market Analysis
+          </p>
+        </div>
+
+        <button
+          onClick={closeMenu}
+          className="lg:hidden bg-[var(--input)] px-3 py-2 rounded-lg"
+        >
+          ✕
+        </button>
       </div>
 
       <div
@@ -71,10 +85,7 @@ export default function Sidebar() {
             <p className="font-bold truncate">
               {user?.name || user?.username || "Trader"}
             </p>
-            <p
-              className="text-xs truncate"
-              style={{ color: "var(--muted)" }}
-            >
+            <p className="text-xs truncate" style={{ color: "var(--muted)" }}>
               {user?.email || "No email"}
             </p>
           </div>
@@ -89,6 +100,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={closeMenu}
               className={
                 active
                   ? "flex items-center gap-3 bg-purple-700 text-white px-4 py-3 rounded-xl font-semibold"
@@ -112,5 +124,30 @@ export default function Sidebar() {
         </p>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 bg-purple-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg"
+      >
+        ☰ Menu
+      </button>
+
+      <div className="hidden lg:block">{SidebarContent}</div>
+
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div>{SidebarContent}</div>
+
+          <button
+            aria-label="Close menu"
+            onClick={closeMenu}
+            className="flex-1 bg-black/60"
+          />
+        </div>
+      )}
+    </>
   );
 }
