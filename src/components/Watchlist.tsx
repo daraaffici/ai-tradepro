@@ -10,6 +10,7 @@ type WatchlistItem = {
 type MarketPrice = {
   price: number;
   change: number;
+  source?: string;
 };
 
 const marketOptions = [
@@ -52,29 +53,48 @@ export default function Watchlist() {
 
       const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+      if (!user.id) {
+        setItems([]);
+        setPrices({});
+        return;
+      }
+
       const res = await fetch(`/api/watchlist?userId=${user.id}`, {
         cache: "no-store",
       });
-      
-      const data: WatchlistItem[] = await res.json();
 
+      const data: WatchlistItem[] = await res.json();
       setItems(data);
+
+      const priceResults = await Promise.all(
+        data.map(async (item) => {
+          const cleanSymbol = item.symbol.trim().toUpperCase();
+
+          const marketRes = await fetch(
+            `/api/market/all-price?symbol=${cleanSymbol}`,
+            { cache: "no-store" }
+          );
+
+          const marketData = await marketRes.json();
+
+          return {
+            symbol: cleanSymbol,
+            price: Number(marketData.price || 0),
+            change: Number(marketData.change || 0),
+            source: marketData.source,
+          };
+        })
+      );
 
       const priceMap: Record<string, MarketPrice> = {};
 
-      for (const item of data) {
-        const marketRes = await fetch(
-          `/api/market/all-price?symbol=${item.symbol}`,
-          { cache: "no-store" }
-        );
-
-        const marketData = await marketRes.json();
-
+      priceResults.forEach((item) => {
         priceMap[item.symbol] = {
-          price: Number(marketData.price || 0),
-          change: Number(marketData.change || 0),
+          price: item.price,
+          change: item.change,
+          source: item.source,
         };
-      }
+      });
 
       setPrices(priceMap);
     } catch (error) {
@@ -92,20 +112,22 @@ export default function Watchlist() {
       return;
     }
 
+    const cleanSymbol = symbol.trim().toUpperCase();
+
     const res = await fetch("/api/watchlist/add", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        symbol,
+        symbol: cleanSymbol,
         userId: user.id,
       }),
     });
 
     const data = await res.json();
 
-    if (!data.success) {
+    if (!res.ok || !data.success) {
       alert(data.error || "Failed to add watchlist");
       return;
     }
@@ -157,7 +179,8 @@ export default function Watchlist() {
       ) : (
         <div className="space-y-3">
           {items.map((item) => {
-            const market = prices[item.symbol];
+            const cleanSymbol = item.symbol.trim().toUpperCase();
+            const market = prices[cleanSymbol];
 
             return (
               <div
@@ -165,7 +188,10 @@ export default function Watchlist() {
                 className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)] flex justify-between items-center"
               >
                 <div>
-                  <p className="font-bold">⭐ {item.symbol}</p>
+                  <p className="font-bold">⭐ {cleanSymbol}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    {market?.source || "Market"}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-4">
