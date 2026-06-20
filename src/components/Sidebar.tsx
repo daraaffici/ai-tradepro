@@ -16,6 +16,7 @@ const menuItems = [
   { name: "News", href: "/news", icon: "📰" },
   { name: "Calendar", href: "/calendar", icon: "📅" },
   { name: "Price Alerts", href: "/alerts", icon: "🔔" },
+  { name: "Risk Manager", href: "/risk", icon: "🛡️" },
   { name: "Settings", href: "/settings", icon: "⚙️" },
 ];
 
