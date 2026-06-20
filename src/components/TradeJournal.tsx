@@ -19,13 +19,15 @@ const marketSymbols = [
   "BTCUSDT",
   "ETHUSDT",
   "SOLUSDT",
-  "EURUSD",
-  "GBPUSD",
-  "USDJPY",
-  "XAUUSD",
+  "BNBUSDT",
+  "XRPUSDT",
+  "ADAUSDT",
+  "DOGEUSDT",
   "AAPL",
   "TSLA",
   "NVDA",
+  "MSFT",
+  "AMD",
 ];
 
 const lotSizes = ["0.01", "0.05", "0.10", "0.25", "0.50", "1", "2", "5", "10"];
@@ -40,6 +42,9 @@ export default function TradeJournal() {
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
   const [lotSize, setLotSize] = useState("1");
+
+  const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     loadTrades();
@@ -69,10 +74,9 @@ export default function TradeJournal() {
 
   async function loadPrice(selectedSymbol: string) {
     try {
-      const res = await fetch(
-        `/api/market/all-price?symbol=${selectedSymbol}`,
-        { cache: "no-store" }
-      );
+      const res = await fetch(`/api/market/all-price?symbol=${selectedSymbol}`, {
+        cache: "no-store",
+      });
 
       const data = await res.json();
 
@@ -141,6 +145,8 @@ export default function TradeJournal() {
       setStopLoss("");
       setLotSize("1");
       loadTrades();
+    } else {
+      alert(data.error || "Failed to add trade");
     }
   }
 
@@ -157,13 +163,25 @@ export default function TradeJournal() {
   }
 
   async function closePosition(id: number) {
-    await fetch("/api/trades/close", {
+    const res = await fetch("/api/trades/close", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ id }),
     });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert(
+        `Trade Closed!\nStatus: ${data.status}\nClose Price: $${Number(
+          data.closePrice || 0
+        ).toLocaleString()}\nProfit: $${Number(data.profit || 0).toFixed(2)}`
+      );
+    } else {
+      alert(data.error || "Failed to close position");
+    }
 
     loadTrades();
   }
@@ -176,6 +194,21 @@ export default function TradeJournal() {
     selectedCurrentPrice,
     Number(lotSize)
   );
+
+  const filteredTrades = trades.filter((trade) => {
+    const matchesSearch = trade.symbol
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (filter === "OPEN") return trade.status === "Open";
+    if (filter === "CLOSED") return trade.status !== "Open";
+    if (filter === "WIN") return trade.status === "Win";
+    if (filter === "LOSS") return trade.status === "Loss";
+
+    return true;
+  });
 
   return (
     <div className="bg-[var(--card)] mt-8 p-5 rounded-2xl border border-[var(--border)]">
@@ -280,13 +313,34 @@ export default function TradeJournal() {
 
       <button
         onClick={addTrade}
-        className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg mb-6"
+        className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg mb-6 text-white"
       >
         Add Trade
       </button>
 
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search trade symbol..."
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)] flex-1"
+        />
+
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
+        >
+          <option value="ALL">All Trades</option>
+          <option value="OPEN">Open Trades</option>
+          <option value="CLOSED">Closed Trades</option>
+          <option value="WIN">Winning Trades</option>
+          <option value="LOSS">Losing Trades</option>
+        </select>
+      </div>
+
       <div className="space-y-3">
-        {trades.map((trade) => {
+        {filteredTrades.map((trade) => {
           const tradeCurrentPrice = prices[trade.symbol] || 0;
 
           const liveProfit = calcProfit(
@@ -330,8 +384,6 @@ export default function TradeJournal() {
                         ? "text-green-400"
                         : trade.status === "Loss"
                         ? "text-red-400"
-                        : trade.status === "Closed"
-                        ? "text-[var(--muted)]"
                         : "text-yellow-400"
                     }
                   >
@@ -389,6 +441,7 @@ export default function TradeJournal() {
                   <p className="text-[var(--muted)] text-sm">
                     {trade.status === "Open" ? "Live P/L" : "Profit"}
                   </p>
+
                   <p
                     className={
                       (displayProfit || 0) >= 0
@@ -407,7 +460,7 @@ export default function TradeJournal() {
                 <div className="mt-4">
                   <button
                     onClick={() => closePosition(trade.id)}
-                    className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm"
+                    className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm text-white"
                   >
                     🔒 Close Position
                   </button>
