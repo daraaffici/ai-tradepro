@@ -11,6 +11,7 @@ import AuthGuard from "@/components/AuthGuard";
 import UserProfile from "@/components/UserProfile";
 import DashboardSummary from "@/components/DashboardSummary";
 import AutoTradeMonitor from "@/components/AutoTradeMonitor";
+import TopMovers from "@/components/TopMovers";
 
 export default function Home() {
   return (
@@ -56,6 +57,7 @@ export default function Home() {
           </div>
 
           <DashboardSummary />
+          <TopMovers />
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
             <div
