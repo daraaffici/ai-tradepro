@@ -12,7 +12,7 @@ export default function AutoTradeMonitor() {
 
     const interval = setInterval(() => {
       monitorTrades();
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
