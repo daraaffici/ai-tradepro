@@ -12,6 +12,7 @@ import UserProfile from "@/components/UserProfile";
 import DashboardSummary from "@/components/DashboardSummary";
 import AutoTradeMonitor from "@/components/AutoTradeMonitor";
 import TopMovers from "@/components/TopMovers";
+import NotificationCenter from "@/components/NotificationCenter";
 
 export default function Home() {
   return (
@@ -27,8 +28,8 @@ export default function Home() {
 
         <main className="flex-1 w-full p-4 lg:p-6 overflow-x-hidden">
           <Header />
+          <NotificationCenter />
           <AutoTradeMonitor />
-
           <UserProfile />
 
           <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 mt-6 mb-6">
