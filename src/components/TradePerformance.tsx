@@ -2,18 +2,25 @@
 
 import { useEffect, useState } from "react";
 
+type TradeInfo = {
+  symbol: string;
+  profit: number;
+};
+
 type Stats = {
   totalTrades: number;
   openTrades: number;
+  closedTrades: number;
   buyTrades: number;
   sellTrades: number;
-  holdTrades: number;
   winTrades: number;
   lossTrades: number;
   winRate: number;
   totalProfit: number;
   totalLoss: number;
   netProfit: number;
+  bestTrade: TradeInfo | null;
+  worstTrade: TradeInfo | null;
 };
 
 export default function TradePerformance() {
@@ -24,7 +31,10 @@ export default function TradePerformance() {
   }, []);
 
   async function loadStats() {
-    const res = await fetch("/api/trades/stats");
+    const res = await fetch("/api/trades/stats", {
+      cache: "no-store",
+    });
+
     const data = await res.json();
     setStats(data);
   }
@@ -34,13 +44,25 @@ export default function TradePerformance() {
   return (
     <div className="grid md:grid-cols-4 gap-4">
       <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
-        <p className="text-[var(--muted)]">Total Trades</p>
+        <p className="text-[var(--muted)]">Total BUY/SELL Trades</p>
         <h2 className="text-3xl font-bold mt-2">{stats.totalTrades}</h2>
       </div>
 
       <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
         <p className="text-[var(--muted)]">Open Trades</p>
         <h2 className="text-3xl font-bold mt-2">{stats.openTrades}</h2>
+      </div>
+
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+        <p className="text-[var(--muted)]">Closed Trades</p>
+        <h2 className="text-3xl font-bold mt-2">{stats.closedTrades}</h2>
+      </div>
+
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+        <p className="text-[var(--muted)]">Win Rate</p>
+        <h2 className="text-3xl font-bold mt-2 text-yellow-400">
+          {stats.winRate.toFixed(1)}%
+        </h2>
       </div>
 
       <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
@@ -58,13 +80,6 @@ export default function TradePerformance() {
       </div>
 
       <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
-        <p className="text-[var(--muted)]">HOLD Trades</p>
-        <h2 className="text-3xl font-bold mt-2 text-yellow-400">
-          {stats.holdTrades}
-        </h2>
-      </div>
-
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
         <p className="text-[var(--muted)]">Win Trades</p>
         <h2 className="text-3xl font-bold mt-2 text-green-400">
           {stats.winTrades}
@@ -75,13 +90,6 @@ export default function TradePerformance() {
         <p className="text-[var(--muted)]">Loss Trades</p>
         <h2 className="text-3xl font-bold mt-2 text-red-400">
           {stats.lossTrades}
-        </h2>
-      </div>
-
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
-        <p className="text-[var(--muted)]">Win Rate</p>
-        <h2 className="text-3xl font-bold mt-2 text-yellow-400">
-          {stats.winRate.toFixed(1)}%
         </h2>
       </div>
 
@@ -109,6 +117,24 @@ export default function TradePerformance() {
           }
         >
           ${stats.netProfit.toFixed(2)}
+        </h2>
+      </div>
+
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+        <p className="text-[var(--muted)]">Best Trade</p>
+        <h2 className="text-xl font-bold mt-2 text-green-400">
+          {stats.bestTrade
+            ? `${stats.bestTrade.symbol} +$${stats.bestTrade.profit.toFixed(2)}`
+            : "-"}
+        </h2>
+      </div>
+
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+        <p className="text-[var(--muted)]">Worst Trade</p>
+        <h2 className="text-xl font-bold mt-2 text-red-400">
+          {stats.worstTrade
+            ? `${stats.worstTrade.symbol} $${stats.worstTrade.profit.toFixed(2)}`
+            : "-"}
         </h2>
       </div>
     </div>
