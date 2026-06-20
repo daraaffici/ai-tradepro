@@ -12,10 +12,31 @@ type MarketPrice = {
   change: number;
 };
 
+const marketOptions = [
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "BNBUSDT",
+  "XRPUSDT",
+  "ADAUSDT",
+  "DOGEUSDT",
+  "AVAXUSDT",
+  "LINKUSDT",
+  "SUIUSDT",
+  "AAPL",
+  "TSLA",
+  "NVDA",
+  "MSFT",
+  "AMD",
+  "GOOGL",
+  "AMZN",
+  "META",
+];
+
 export default function Watchlist() {
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [prices, setPrices] = useState<Record<string, MarketPrice>>({});
-  const [symbol, setSymbol] = useState("");
+  const [symbol, setSymbol] = useState("BTCUSDT");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +48,8 @@ export default function Watchlist() {
 
   async function loadData() {
     try {
+      setLoading(true);
+
       const res = await fetch("/api/watchlist", { cache: "no-store" });
       const data: WatchlistItem[] = await res.json();
 
@@ -57,14 +80,12 @@ export default function Watchlist() {
   }
 
   async function addWatchlist() {
-    const value = symbol.trim().toUpperCase();
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-    if (!value) {
-      alert("Please enter symbol");
+    if (!user.id) {
+      alert("Please login again");
       return;
     }
-
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     const res = await fetch("/api/watchlist/add", {
       method: "POST",
@@ -72,7 +93,7 @@ export default function Watchlist() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        symbol: value,
+        symbol,
         userId: user.id,
       }),
     });
@@ -84,7 +105,6 @@ export default function Watchlist() {
       return;
     }
 
-    setSymbol("");
     await loadData();
   }
 
@@ -97,7 +117,7 @@ export default function Watchlist() {
       body: JSON.stringify({ id }),
     });
 
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    await loadData();
   }
 
   return (
@@ -105,15 +125,17 @@ export default function Watchlist() {
       <h2 className="text-xl font-bold mb-4">Watchlist</h2>
 
       <div className="flex flex-col md:flex-row gap-3 mb-5">
-        <input
+        <select
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") addWatchlist();
-          }}
-          placeholder="Add symbol e.g. BTCUSDT, AAPL, NVDA"
           className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)] flex-1"
-        />
+        >
+          {marketOptions.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
 
         <button
           onClick={addWatchlist}
