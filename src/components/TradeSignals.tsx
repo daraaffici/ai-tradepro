@@ -10,6 +10,8 @@ type SignalItem = {
   takeProfit: number;
   stopLoss: number;
   risk: string;
+  price: number;
+  change: number;
 };
 
 const signalSymbols = [
@@ -18,11 +20,13 @@ const signalSymbols = [
   "SOLUSDT",
   "BNBUSDT",
   "XRPUSDT",
-  "XAUUSD",
+  "ADAUSDT",
+  "DOGEUSDT",
   "AAPL",
   "TSLA",
   "NVDA",
   "MSFT",
+  "AMD",
 ];
 
 export default function TradeSignals() {
@@ -32,38 +36,45 @@ export default function TradeSignals() {
   useEffect(() => {
     loadSignals();
 
-    const interval = setInterval(() => {
-      loadSignals();
-    }, 60000);
-
+    const interval = setInterval(loadSignals, 60000);
     return () => clearInterval(interval);
   }, []);
 
   async function loadSignals() {
     try {
-      const results: SignalItem[] = [];
+      setLoading(true);
 
-      for (const symbol of signalSymbols) {
-        const res = await fetch(`/api/ai-analysis?symbol=${symbol}`, {
-          cache: "no-store",
-        });
+      const results = await Promise.all(
+        signalSymbols.map(async (symbol) => {
+          try {
+            const res = await fetch(`/api/ai-analysis?symbol=${symbol}`, {
+              cache: "no-store",
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (!data.error && data.price > 0) {
-          results.push({
-            symbol: data.symbol,
-            signal: data.recommendation,
-            confidence: data.confidence,
-            risk: data.risk,
-            entry: data.entry,
-            takeProfit: data.takeProfit,
-            stopLoss: data.stopLoss,
-          });
-        }
-      }
+            if (data.error || !data.price || data.price <= 0) {
+              return null;
+            }
 
-      setSignals(results);
+            return {
+              symbol: data.symbol,
+              signal: data.recommendation,
+              confidence: data.confidence,
+              risk: data.risk,
+              entry: data.entry,
+              takeProfit: data.takeProfit,
+              stopLoss: data.stopLoss,
+              price: data.price,
+              change: data.change,
+            } as SignalItem;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      setSignals(results.filter(Boolean) as SignalItem[]);
     } catch (error) {
       console.error("Failed to load signals:", error);
     } finally {
@@ -73,9 +84,21 @@ export default function TradeSignals() {
 
   return (
     <div className="bg-[var(--card)] mt-8 p-5 rounded-2xl border border-[var(--border)]">
-      <h2 className="text-xl font-bold mb-4">
-        Dynamic Trade Signals
-      </h2>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-xl font-bold">Dynamic Trade Signals</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Crypto and stock signals based on live market change.
+          </p>
+        </div>
+
+        <button
+          onClick={loadSignals}
+          className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white font-bold"
+        >
+          Refresh
+        </button>
+      </div>
 
       {loading ? (
         <p className="text-[var(--muted)]">Scanning market signals...</p>
@@ -91,7 +114,12 @@ export default function TradeSignals() {
               className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
             >
               <div className="flex justify-between items-center">
-                <h3 className="font-bold text-lg">{item.symbol}</h3>
+                <div>
+                  <h3 className="font-bold text-lg">{item.symbol}</h3>
+                  <p className="text-sm text-[var(--muted)]">
+                    ${item.price.toLocaleString()} • {item.change.toFixed(2)}%
+                  </p>
+                </div>
 
                 <span
                   className={
