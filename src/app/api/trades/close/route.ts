@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-async function getPrice(symbol: string) {
+async function getPrice(baseUrl: string, symbol: string) {
   const res = await fetch(
-    `http://localhost:3000/api/market/all-price?symbol=${symbol}`,
+    `${baseUrl}/api/market/all-price?symbol=${symbol}`,
     { cache: "no-store" }
   );
 
@@ -18,15 +18,11 @@ function calculateProfit(
   lotSize: number
 ) {
   if (type === "BUY") {
-    return Number(
-      ((closePrice - entry) * lotSize).toFixed(2)
-    );
+    return Number(((closePrice - entry) * lotSize).toFixed(2));
   }
 
   if (type === "SELL") {
-    return Number(
-      ((entry - closePrice) * lotSize).toFixed(2)
-    );
+    return Number(((entry - closePrice) * lotSize).toFixed(2));
   }
 
   return 0;
@@ -34,6 +30,9 @@ function calculateProfit(
 
 export async function POST(req: Request) {
   try {
+    const url = new URL(req.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
+
     const { id } = await req.json();
 
     const trade = await prisma.trade.findUnique({
@@ -42,17 +41,26 @@ export async function POST(req: Request) {
 
     if (!trade) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Trade not found",
-        },
+        { success: false, error: "Trade not found" },
         { status: 404 }
       );
     }
 
-    const currentPrice = await getPrice(
-      trade.symbol
-    );
+    if (trade.status !== "Open") {
+      return NextResponse.json(
+        { success: false, error: "Trade is already closed" },
+        { status: 400 }
+      );
+    }
+
+    const currentPrice = await getPrice(baseUrl, trade.symbol);
+
+    if (!currentPrice || currentPrice <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Current market price unavailable" },
+        { status: 400 }
+      );
+    }
 
     const profit = calculateProfit(
       trade.type,
@@ -61,10 +69,12 @@ export async function POST(req: Request) {
       trade.lotSize
     );
 
+    const status = profit >= 0 ? "Win" : "Loss";
+
     await prisma.trade.update({
       where: { id: Number(id) },
       data: {
-        status: "Closed",
+        status,
         closePrice: currentPrice,
         profit,
       },
@@ -72,14 +82,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      status,
       closePrice: currentPrice,
       profit,
     });
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         error: "Failed to close position",
+        message: error.message,
       },
       { status: 500 }
     );
