@@ -50,7 +50,12 @@ export default function Watchlist() {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/watchlist", { cache: "no-store" });
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+      const res = await fetch(`/api/watchlist?userId=${user.id}`, {
+        cache: "no-store",
+      });
+      
       const data: WatchlistItem[] = await res.json();
 
       setItems(data);
