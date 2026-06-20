@@ -15,15 +15,13 @@ type MarketPrice = {
 export default function Watchlist() {
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [prices, setPrices] = useState<Record<string, MarketPrice>>({});
+  const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
 
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000);
-
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -58,6 +56,38 @@ export default function Watchlist() {
     }
   }
 
+  async function addWatchlist() {
+    const value = symbol.trim().toUpperCase();
+
+    if (!value) {
+      alert("Please enter symbol");
+      return;
+    }
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const res = await fetch("/api/watchlist/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        symbol: value,
+        userId: user.id,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      alert(data.error || "Failed to add watchlist");
+      return;
+    }
+
+    setSymbol("");
+    await loadData();
+  }
+
   async function deleteWatchlist(id: number) {
     await fetch("/api/watchlist/delete", {
       method: "POST",
@@ -73,6 +103,25 @@ export default function Watchlist() {
   return (
     <div className="bg-[var(--card)] mt-8 p-5 rounded-2xl border border-[var(--border)]">
       <h2 className="text-xl font-bold mb-4">Watchlist</h2>
+
+      <div className="flex flex-col md:flex-row gap-3 mb-5">
+        <input
+          value={symbol}
+          onChange={(e) => setSymbol(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") addWatchlist();
+          }}
+          placeholder="Add symbol e.g. BTCUSDT, AAPL, NVDA"
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)] flex-1"
+        />
+
+        <button
+          onClick={addWatchlist}
+          className="bg-purple-600 hover:bg-purple-700 px-5 py-3 rounded-lg font-bold text-white"
+        >
+          Add Watchlist
+        </button>
+      </div>
 
       {loading ? (
         <p className="text-[var(--muted)]">Loading watchlist...</p>
