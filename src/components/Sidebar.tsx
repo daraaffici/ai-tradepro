@@ -15,6 +15,7 @@ const menuItems = [
   { name: "Performance", href: "/performance", icon: "🏆" },
   { name: "News", href: "/news", icon: "📰" },
   { name: "Calendar", href: "/calendar", icon: "📅" },
+  { name: "Price Alerts", href: "/alerts", icon: "🔔" },
   { name: "Settings", href: "/settings", icon: "⚙️" },
 ];
 

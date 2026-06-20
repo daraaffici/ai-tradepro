@@ -55,3 +55,12 @@ model Trade {
 
   user User @relation(fields: [userId], references: [id])
 }
+
+model PriceAlert {
+  id          Int      @id @default(autoincrement())
+  symbol      String
+  condition   String
+  targetPrice Float
+  triggered   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
