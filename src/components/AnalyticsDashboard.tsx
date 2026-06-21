@@ -31,6 +31,9 @@ export default function AnalyticsDashboard() {
 
   useEffect(() => {
     loadStats();
+
+    const interval = setInterval(loadStats, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   async function loadStats() {
@@ -64,30 +67,42 @@ export default function AnalyticsDashboard() {
   ];
 
   return (
-    <div className="grid xl:grid-cols-3 gap-6 mt-8">
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] min-h-[360px] overflow-hidden">
+    <div className="grid xl:grid-cols-3 gap-6 mt-8 mb-12 items-stretch">
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] h-[430px] overflow-hidden">
         <h2 className="text-xl font-bold mb-4">📈 Account Growth</h2>
 
-        <div className="h-[260px] w-full">
+        <div className="h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={accountGrowth} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
+            <LineChart
+              data={accountGrowth}
+              margin={{ top: 20, right: 25, left: 5, bottom: 20 }}
+            >
               <XAxis dataKey="name" />
-              <YAxis width={50} />
+              <YAxis width={55} />
               <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                dot={{ r: 5 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] min-h-[360px] overflow-hidden">
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] h-[430px] overflow-hidden">
         <h2 className="text-xl font-bold mb-4">💰 Profit / Loss</h2>
 
-        <div className="h-[260px] w-full">
+        <div className="h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={profitLoss} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
+            <BarChart
+              data={profitLoss}
+              margin={{ top: 20, right: 25, left: 5, bottom: 20 }}
+            >
               <XAxis dataKey="name" />
-              <YAxis width={50} />
+              <YAxis width={55} />
               <Tooltip />
               <Bar dataKey="value" fill="#a855f7" radius={[8, 8, 0, 0]} />
             </BarChart>
@@ -95,17 +110,17 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] min-h-[360px] overflow-hidden">
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] h-[430px] overflow-hidden">
         <h2 className="text-xl font-bold mb-4">🏆 Win / Loss</h2>
 
-        <div className="h-[230px] w-full">
+        <div className="h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+            <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
               <Pie
                 data={winLoss}
                 dataKey="value"
                 nameKey="name"
-                outerRadius={85}
+                outerRadius={95}
                 label
               >
                 {winLoss.map((_, index) => (
@@ -117,7 +132,7 @@ export default function AnalyticsDashboard() {
           </ResponsiveContainer>
         </div>
 
-        <p className="text-center text-yellow-400 font-bold mt-2">
+        <p className="text-center text-yellow-400 font-bold mt-4">
           Win Rate: {stats.winRate.toFixed(1)}%
         </p>
       </div>
