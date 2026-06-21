@@ -24,6 +24,8 @@ type Stats = {
   lossTrades: number;
 };
 
+const COLORS = ["#22c55e", "#ef4444"];
+
 export default function AnalyticsDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
 
@@ -42,15 +44,18 @@ export default function AnalyticsDashboard() {
 
   if (!stats) return null;
 
+  const startBalance = 10000;
+  const currentBalance = startBalance + stats.netProfit;
+
   const accountGrowth = [
-    { name: "Start", value: 10000 },
-    { name: "Now", value: 10000 + stats.netProfit },
+    { name: "Start", value: startBalance },
+    { name: "Now", value: currentBalance },
   ];
 
   const profitLoss = [
-    { name: "Profit", value: stats.totalProfit },
-    { name: "Loss", value: Math.abs(stats.totalLoss) },
-    { name: "Net", value: stats.netProfit },
+    { name: "Profit", value: Number(stats.totalProfit.toFixed(2)) },
+    { name: "Loss", value: Number(Math.abs(stats.totalLoss).toFixed(2)) },
+    { name: "Net", value: Number(stats.netProfit.toFixed(2)) },
   ];
 
   const winLoss = [
@@ -60,45 +65,51 @@ export default function AnalyticsDashboard() {
 
   return (
     <div className="grid xl:grid-cols-3 gap-6 mt-8">
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] min-h-[360px] overflow-hidden">
         <h2 className="text-xl font-bold mb-4">📈 Account Growth</h2>
 
-        <div className="h-64">
+        <div className="h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={accountGrowth}>
+            <LineChart data={accountGrowth} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
               <XAxis dataKey="name" />
-              <YAxis />
+              <YAxis width={50} />
               <Tooltip />
-              <Line type="monotone" dataKey="value" strokeWidth={3} />
+              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] min-h-[360px] overflow-hidden">
         <h2 className="text-xl font-bold mb-4">💰 Profit / Loss</h2>
 
-        <div className="h-64">
+        <div className="h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={profitLoss}>
+            <BarChart data={profitLoss} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
               <XAxis dataKey="name" />
-              <YAxis />
+              <YAxis width={50} />
               <Tooltip />
-              <Bar dataKey="value" />
+              <Bar dataKey="value" fill="#a855f7" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
+      <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] min-h-[360px] overflow-hidden">
         <h2 className="text-xl font-bold mb-4">🏆 Win / Loss</h2>
 
-        <div className="h-64">
+        <div className="h-[230px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={winLoss} dataKey="value" nameKey="name" outerRadius={90} label>
+              <Pie
+                data={winLoss}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={85}
+                label
+              >
                 {winLoss.map((_, index) => (
-                  <Cell key={index} />
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip />
@@ -106,7 +117,7 @@ export default function AnalyticsDashboard() {
           </ResponsiveContainer>
         </div>
 
-        <p className="text-center text-yellow-400 font-bold">
+        <p className="text-center text-yellow-400 font-bold mt-2">
           Win Rate: {stats.winRate.toFixed(1)}%
         </p>
       </div>
