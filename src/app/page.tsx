@@ -13,6 +13,7 @@ import DashboardSummary from "@/components/DashboardSummary";
 import AutoTradeMonitor from "@/components/AutoTradeMonitor";
 import TopMovers from "@/components/TopMovers";
 import NotificationCenter from "@/components/NotificationCenter";
+import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 
 export default function Home() {
   return (
@@ -58,6 +59,7 @@ export default function Home() {
           </div>
 
           <DashboardSummary />
+          <AnalyticsDashboard />
           <TopMovers />
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
