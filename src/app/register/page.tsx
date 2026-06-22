@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import AnimatedMarketBackground from "@/components/AnimatedMarketBackground";
 
 const countries = [
   { name: "Cambodia", code: "+855" },
-  { name: "United States", code: "+1" },
   { name: "Thailand", code: "+66" },
   { name: "Vietnam", code: "+84" },
-  { name: "China", code: "+86" },
-  { name: "Japan", code: "+81" },
-  { name: "South Korea", code: "+82" },
   { name: "Singapore", code: "+65" },
+  { name: "South Korea", code: "+82" },
+  { name: "Japan", code: "+81" },
+  { name: "United States", code: "+1" },
 ];
 
 export default function RegisterPage() {
@@ -24,13 +22,14 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   async function register() {
-    if (!name || !phone || !email || !password || !confirmPassword) {
+    if (
+      !name ||
+      !phone ||
+      !email ||
+      !password ||
+      !confirmPassword
+    ) {
       alert("Please fill all fields");
-      return;
-    }
-
-    if (password.length < 6) {
-      alert("Password must be at least 6 characters");
       return;
     }
 
@@ -39,74 +38,158 @@ export default function RegisterPage() {
       return;
     }
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        phone: `${countryCode}${phone}`,
-        email,
-        password,
-      }),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          phone: `${countryCode}${phone}`,
+          email,
+          password,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.success) {
-      alert("Register success. Please login.");
-      window.location.href = "/login";
-    } else {
-      alert(data.error || "Register failed");
+      if (data.success) {
+        alert("Register successful");
+        window.location.href = "/login";
+      } else {
+        alert(data.error || "Register failed");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Register failed");
     }
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center text-white p-4 overflow-hidden bg-black">
-      <AnimatedMarketBackground />
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cover bg-center p-4"
+      style={{
+        backgroundImage: "url('/images/market-bg.jpg')",
+      }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/70" />
 
-      <div className="relative z-10 w-full max-w-md bg-zinc-900/90 backdrop-blur-md p-8 rounded-2xl border border-zinc-700 shadow-2xl">
-        <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-        <p className="text-zinc-400 mb-6">Join AI TradePro</p>
+      {/* Glow Effects */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-green-500/20 blur-3xl rounded-full animate-pulse" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-3xl rounded-full animate-pulse" />
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <button onClick={() => alert("Google OAuth will be added later.")} className="bg-white text-black p-3 rounded-lg font-bold">
-            Google
-          </button>
+      {/* Floating Symbols */}
+      <div className="absolute top-24 left-12 text-green-400 text-5xl font-bold animate-bounce">
+        ₿
+      </div>
 
-          <button onClick={() => alert("Facebook OAuth will be added later.")} className="bg-blue-600 p-3 rounded-lg font-bold">
-            Facebook
-          </button>
-        </div>
+      <div className="absolute top-40 right-16 text-blue-400 text-4xl font-bold animate-pulse">
+        Ξ
+      </div>
+
+      <div className="absolute bottom-28 left-16 text-yellow-400 text-4xl animate-bounce">
+        📈
+      </div>
+
+      <div className="absolute bottom-40 right-12 text-green-400 text-4xl animate-pulse">
+        🚀
+      </div>
+
+      {/* Title */}
+      <div className="absolute top-10 text-center w-full z-10">
+        <h1 className="text-white text-4xl font-bold drop-shadow-lg">
+          AI TradePro
+        </h1>
+
+        <p className="text-zinc-300 mt-2">
+          Trade Smarter. Trade Faster.
+        </p>
+      </div>
+
+      {/* Register Card */}
+      <div className="relative z-20 w-full max-w-md bg-black/75 backdrop-blur-md border border-zinc-700 rounded-2xl p-8 shadow-2xl">
+        <h2 className="text-white text-3xl font-bold">
+          Create Account
+        </h2>
+
+        <p className="text-zinc-300 mt-2 mb-6">
+          Join AI TradePro
+        </p>
 
         <div className="space-y-4">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+          <input
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+          />
 
           <div className="flex gap-2">
-            <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="bg-zinc-800 p-3 rounded-lg w-32 outline-none">
-              {countries.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.name} {item.code}
+            <select
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              className="bg-zinc-800 text-white p-3 rounded-lg border border-zinc-700"
+            >
+              {countries.map((country) => (
+                <option
+                  key={country.code}
+                  value={country.code}
+                >
+                  {country.name} ({country.code})
                 </option>
               ))}
             </select>
 
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone Number" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+            <input
+              placeholder="Phone Number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="flex-1 p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+            />
           </div>
 
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+          />
 
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+          />
 
-          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) =>
+              setConfirmPassword(e.target.value)
+            }
+            className="w-full p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+          />
 
-          <button onClick={register} className="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-lg font-bold">
+          <button
+            onClick={register}
+            className="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-lg text-white font-bold"
+          >
             Create Account
           </button>
         </div>
 
-        <p className="text-center mt-5 text-sm text-zinc-400">
+        <p className="text-center text-zinc-300 mt-5">
           Already have an account?{" "}
-          <Link href="/login" className="text-purple-400 font-bold hover:underline">
+          <Link
+            href="/login"
+            className="text-purple-400 font-bold hover:underline"
+          >
             Login
           </Link>
         </p>

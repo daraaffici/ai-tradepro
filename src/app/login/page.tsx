@@ -2,66 +2,113 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import AnimatedMarketBackground from "@/components/AnimatedMarketBackground";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   async function login() {
-    if (!email || !password) {
-      alert("Please enter email and password");
-      return;
-    }
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+      const data = await res.json();
 
-    const data = await res.json();
-
-    if (data.success) {
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.location.href = "/";
-    } else {
-      alert(data.error || "Login failed");
+      if (data.success) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        window.location.href = "/";
+      } else {
+        alert(data.error || "Login failed");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Login failed");
     }
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center text-white p-4 overflow-hidden bg-black">
-      <AnimatedMarketBackground />
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cover bg-center p-4"
+      style={{
+        backgroundImage: "url('/images/market-bg.jpg')",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/70" />
 
-      <div className="relative z-10 w-full max-w-md bg-zinc-900/90 backdrop-blur-md p-8 rounded-2xl border border-zinc-700 shadow-2xl">
-        <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-        <p className="text-zinc-400 mb-6">Login to AI TradePro</p>
+      <div className="absolute top-0 left-0 w-96 h-96 bg-green-500/20 blur-3xl rounded-full animate-pulse" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-3xl rounded-full animate-pulse" />
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <button onClick={() => alert("Google OAuth will be added later.")} className="bg-white text-black p-3 rounded-lg font-bold">
-            Google
-          </button>
+      <div className="absolute top-24 left-12 text-green-400 text-5xl font-bold animate-bounce">
+        ₿
+      </div>
 
-          <button onClick={() => alert("Facebook OAuth will be added later.")} className="bg-blue-600 p-3 rounded-lg font-bold">
-            Facebook
-          </button>
-        </div>
+      <div className="absolute top-40 right-16 text-blue-400 text-4xl font-bold animate-pulse">
+        Ξ
+      </div>
+
+      <div className="absolute bottom-28 left-16 text-yellow-400 text-4xl animate-bounce">
+        📈
+      </div>
+
+      <div className="absolute bottom-40 right-12 text-green-400 text-4xl animate-pulse">
+        🚀
+      </div>
+
+      <div className="absolute top-10 text-center w-full z-10">
+        <h1 className="text-white text-4xl font-bold drop-shadow-lg">
+          AI TradePro
+        </h1>
+
+        <p className="text-zinc-300 mt-2">
+          Trade Smarter. Trade Faster.
+        </p>
+      </div>
+
+      <div className="relative z-20 w-full max-w-md bg-black/75 backdrop-blur-md border border-zinc-700 rounded-2xl p-8 shadow-2xl">
+        <h2 className="text-white text-3xl font-bold">Welcome Back</h2>
+
+        <p className="text-zinc-300 mt-2 mb-6">Login to your account</p>
 
         <div className="space-y-4">
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+          />
 
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full bg-zinc-800 p-3 rounded-lg outline-none" />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 rounded-lg bg-zinc-800 text-white border border-zinc-700"
+          />
 
-          <button onClick={login} className="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-lg font-bold">
+          <button
+            onClick={login}
+            className="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-lg text-white font-bold"
+          >
             Login
           </button>
         </div>
 
-        <p className="text-center mt-5 text-sm text-zinc-400">
+        <p className="text-center text-zinc-300 mt-5">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-purple-400 font-bold hover:underline">
-            Create account
+          <Link
+            href="/register"
+            className="text-purple-400 font-bold hover:underline"
+          >
+            Register
           </Link>
         </p>
       </div>
