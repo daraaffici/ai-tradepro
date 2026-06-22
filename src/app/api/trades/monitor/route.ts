@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 async function getPrice(baseUrl: string, symbol: string) {
   const res = await fetch(
@@ -26,6 +27,13 @@ function calculateProfit(
   }
 
   return 0;
+}
+
+function formatMoney(value: number) {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export async function GET(req: Request) {
@@ -55,24 +63,29 @@ export async function GET(req: Request) {
       }
 
       let newStatus: "Win" | "Loss" | null = null;
+      let hitType: "TP" | "SL" | null = null;
 
       if (trade.type === "BUY") {
         if (currentPrice >= trade.takeProfit) {
           newStatus = "Win";
+          hitType = "TP";
         } else if (currentPrice <= trade.stopLoss) {
           newStatus = "Loss";
+          hitType = "SL";
         }
       }
 
       if (trade.type === "SELL") {
         if (currentPrice <= trade.takeProfit) {
           newStatus = "Win";
+          hitType = "TP";
         } else if (currentPrice >= trade.stopLoss) {
           newStatus = "Loss";
+          hitType = "SL";
         }
       }
 
-      if (!newStatus) continue;
+      if (!newStatus || !hitType) continue;
 
       const profit = calculateProfit(
         trade.type,
@@ -92,15 +105,34 @@ export async function GET(req: Request) {
 
       updated++;
 
-      closedTrades.push({
+      const closedTrade = {
         id: trade.id,
         symbol: trade.symbol,
         type: trade.type,
         status: newStatus,
+        hitType,
         entry: trade.entry,
+        takeProfit: trade.takeProfit,
+        stopLoss: trade.stopLoss,
         closePrice: currentPrice,
+        lotSize: trade.lotSize,
         profit,
-      });
+      };
+
+      closedTrades.push(closedTrade);
+
+      await sendTelegramMessage(
+        `${hitType === "TP" ? "🎯 <b>TAKE PROFIT HIT</b>" : "🛑 <b>STOP LOSS HIT</b>"}\n\n` +
+          `<b>Symbol:</b> ${trade.symbol}\n` +
+          `<b>Type:</b> ${trade.type}\n` +
+          `<b>Status:</b> ${newStatus}\n\n` +
+          `<b>Entry:</b> $${formatMoney(trade.entry)}\n` +
+          `<b>Close:</b> $${formatMoney(currentPrice)}\n` +
+          `<b>TP:</b> $${formatMoney(trade.takeProfit)}\n` +
+          `<b>SL:</b> $${formatMoney(trade.stopLoss)}\n` +
+          `<b>Lot:</b> ${trade.lotSize}\n\n` +
+          `<b>Profit:</b> ${profit >= 0 ? "+" : "-"}$${formatMoney(Math.abs(profit))}`
+      );
     }
 
     return NextResponse.json({
