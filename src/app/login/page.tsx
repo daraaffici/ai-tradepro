@@ -1,59 +1,72 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const router = useRouter();
+  async function login() {
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
+    }
 
-  async function handleLogin() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ email, password }),
     });
 
     const data = await res.json();
 
-    if (!res.ok) {
-      alert(data.error);
-      return;
+    if (data.success) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.href = "/";
+    } else {
+      alert(data.error || "Login failed");
     }
-
-    localStorage.setItem("user", JSON.stringify(data.user));
-    alert("Login success!");
-    router.push("/");
   }
 
   return (
-    <div className="bg-[var(--background)] text-[var(--foreground)] min-h-screen flex items-center justify-center">
-      <div className="bg-[var(--card)] p-8 rounded-xl border border-[var(--border)] w-96">
-        <h1 className="text-2xl font-bold mb-6">Login</h1>
+    <div className="min-h-screen flex items-center justify-center bg-black text-white p-4">
+      <div className="w-full max-w-md bg-zinc-900 p-8 rounded-2xl border border-zinc-800">
+        <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+        <p className="text-zinc-400 mb-6">Login to AI TradePro</p>
 
-        <input
-          className="w-full bg-[var(--input)] text-[var(--foreground)] border border-[var(--border)] rounded-lg p-3 mb-4"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="space-y-4">
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full bg-zinc-800 p-3 rounded-lg"
+          />
 
-        <input
-          className="w-full bg-[var(--input)] text-[var(--foreground)] border border-[var(--border)] rounded-lg p-3 mb-4"
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full bg-zinc-800 p-3 rounded-lg"
+          />
 
-        <button
-          onClick={handleLogin}
-          className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-bold text-white"
-        >
-          Login
-        </button>
+          <button
+            onClick={login}
+            className="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-lg font-bold"
+          >
+            Login
+          </button>
+        </div>
+
+        <p className="text-center mt-5 text-sm text-zinc-400">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-purple-400 font-bold">
+            Create account
+          </Link>
+        </p>
       </div>
     </div>
   );

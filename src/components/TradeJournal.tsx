@@ -54,9 +54,10 @@ export default function TradeJournal() {
     loadPrice(symbol);
 
     const interval = setInterval(() => {
+      monitorTrades();
       loadPrice(symbol);
       loadTrades();
-    }, 10000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [symbol]);
@@ -184,6 +185,26 @@ export default function TradeJournal() {
     }
 
     loadTrades();
+  }
+
+  async function monitorTrades() {
+    try {
+      const res = await fetch("/api/trades/monitor", {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.closedTrades?.length > 0) {
+        data.closedTrades.forEach((trade: any) => {
+          alert(
+            `${trade.status === "Win" ? "🎉 TP Hit" : "❌ SL Hit"}\n${trade.symbol}\nProfit: $${Number(trade.profit).toFixed(2)}`
+          );
+        });
+      }
+    } catch (error) {
+      console.error("Monitor failed:", error);
+    }
   }
 
   const selectedCurrentPrice = prices[symbol] || 0;
