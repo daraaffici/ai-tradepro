@@ -20,16 +20,7 @@ type AnalysisResult = {
   createdAt: string;
 };
 
-const symbols = [
-  "BTCUSDT",
-  "ETHUSDT",
-  "SOLUSDT",
-  "AAPL",
-  "TSLA",
-  "NVDA",
-  "MSFT",
-  "AMD",
-];
+const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AAPL", "TSLA", "NVDA", "MSFT", "AMD"];
 
 export default function AIAnalysis() {
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -48,9 +39,9 @@ export default function AIAnalysis() {
   }
 
   async function analyze() {
-    try {
-      setLoading(true);
+    setLoading(true);
 
+    try {
       const res = await fetch(`/api/ai-analysis?symbol=${symbol}`, {
         cache: "no-store",
       });
@@ -78,7 +69,7 @@ export default function AIAnalysis() {
     if (!result) return;
 
     if (result.recommendation === "HOLD") {
-      alert("HOLD signal cannot be saved to Trade Journal");
+      alert("HOLD signal cannot be saved");
       return;
     }
 
@@ -90,15 +81,19 @@ export default function AIAnalysis() {
     }
 
     const currentUser = JSON.parse(user);
+    const userId = currentUser.id || currentUser.userId;
+
+    if (!userId) {
+      alert("User ID not found. Please login again.");
+      return;
+    }
 
     try {
       const res = await fetch("/api/trades/add-from-ai", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: currentUser.id,
+          userId,
           symbol: result.symbol,
           type: result.recommendation,
           entry: result.entry,
@@ -117,9 +112,7 @@ export default function AIAnalysis() {
 
       await fetch("/api/signals/send", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symbol: result.symbol,
           signal: result.recommendation,
@@ -136,6 +129,7 @@ export default function AIAnalysis() {
       });
 
       alert(`${result.symbol} saved to Trade Journal and sent to Telegram ✅`);
+      window.location.href = "/trades";
     } catch (error) {
       console.error(error);
       alert("Failed to save trade");
@@ -143,12 +137,12 @@ export default function AIAnalysis() {
   }
 
   return (
-    <div className="bg-[var(--card)] rounded-2xl p-5 border border-[var(--border)] mt-8">
+    <div className="bg-[var(--card)] rounded-2xl p-5 border border-[var(--border)]">
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-5">
         <div>
           <h2 className="text-2xl font-bold">AI Analysis Signal</h2>
           <p className="text-sm text-[var(--muted)]">
-            Entry, TP1, TP2, TP3, SL, Confidence and Date / Time.
+            Date / Time, Entry, TP1, TP2, TP3, SL and Telegram.
           </p>
         </div>
 
@@ -182,22 +176,23 @@ export default function AIAnalysis() {
               <p className="text-sm text-[var(--muted)]">
                 Date / Time: {formatDate(result.createdAt)}
               </p>
+              <p className="text-sm text-[var(--muted)]">
+                ${result.price.toLocaleString()} • {result.change.toFixed(2)}%
+              </p>
             </div>
 
             <p
               className={
                 result.recommendation === "BUY"
-                  ? "text-green-400 font-bold"
+                  ? "text-green-400 font-bold text-xl"
                   : result.recommendation === "SELL"
-                  ? "text-red-400 font-bold"
-                  : "text-yellow-400 font-bold"
+                  ? "text-red-400 font-bold text-xl"
+                  : "text-yellow-400 font-bold text-xl"
               }
             >
               {result.recommendation}
             </p>
           </div>
-
-          <p className="text-sm text-[var(--muted)] mt-3">{result.summary}</p>
 
           <div className="grid md:grid-cols-6 gap-4 mt-5">
             <div>
@@ -230,6 +225,8 @@ export default function AIAnalysis() {
               <p className="text-yellow-400">{result.confidence}%</p>
             </div>
           </div>
+
+          <p className="text-sm text-[var(--muted)] mt-5">{result.summary}</p>
 
           <div className="mt-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             <p className="text-sm text-[var(--muted)]">
