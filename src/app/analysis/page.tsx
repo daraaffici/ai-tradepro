@@ -126,14 +126,18 @@ export default function AnalysisPage() {
       body: JSON.stringify({
         symbol: analysis.symbol,
         signal: analysis.recommendation,
+        trend: analysis.trend,
         entry: analysis.entry,
         tp1: analysis.tp1,
         tp2: analysis.tp2,
         tp3: analysis.tp3,
         stopLoss: analysis.stopLoss,
+        support: analysis.support,
+        resistance: analysis.resistance,
         confidence: analysis.confidence,
         risk: analysis.risk,
         riskReward: analysis.riskReward,
+        summary: analysis.summary,
         createdAt: analysis.createdAt,
       }),
     });
@@ -338,7 +342,8 @@ export default function AnalysisPage() {
                 >
                   {analysis.recommendation === "HOLD"
                     ? "HOLD Signal - Not Tradable"
-                    : "Save to Trade Journal + Send Telegram"}
+                    : "Save to Trade Journal"
+                  }
                 </button>
               </div>
 
