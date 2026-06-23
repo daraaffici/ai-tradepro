@@ -146,7 +146,7 @@ export default function AIAnalysis() {
     <div className="bg-[var(--card)] rounded-2xl p-5 border border-[var(--border)] mt-8">
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-5">
         <div>
-          <h2 className="text-2xl font-bold">AI Analysis</h2>
+          <h2 className="text-2xl font-bold">AI Analysis Signal</h2>
           <p className="text-sm text-[var(--muted)]">
             Entry, TP1, TP2, TP3, SL, Confidence and Date / Time.
           </p>
@@ -246,7 +246,7 @@ export default function AIAnalysis() {
                   : "bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white font-bold"
               }
             >
-              💾 Save To Trade Journal + Telegram
+              💾 Save To Trade Journal + Send Telegram
             </button>
           </div>
         </div>
