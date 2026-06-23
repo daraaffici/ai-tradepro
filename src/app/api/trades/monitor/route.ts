@@ -3,10 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { sendTelegramMessage } from "@/lib/telegram";
 
 async function getPrice(baseUrl: string, symbol: string) {
-  const res = await fetch(
-    `${baseUrl}/api/market/all-price?symbol=${symbol}`,
-    { cache: "no-store" }
-  );
+  const res = await fetch(`${baseUrl}/api/market/all-price?symbol=${symbol}`, {
+    cache: "no-store",
+  });
 
   const data = await res.json();
   return Number(data.price || 0);
@@ -30,7 +29,7 @@ function calculateProfit(
 }
 
 function formatMoney(value: number) {
-  return value.toLocaleString(undefined, {
+  return Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -62,30 +61,19 @@ export async function GET(req: Request) {
         continue;
       }
 
-      let newStatus: "Win" | "Loss" | null = null;
       let hitType: "TP" | "SL" | null = null;
 
       if (trade.type === "BUY") {
-        if (currentPrice >= trade.takeProfit) {
-          newStatus = "Win";
-          hitType = "TP";
-        } else if (currentPrice <= trade.stopLoss) {
-          newStatus = "Loss";
-          hitType = "SL";
-        }
+        if (currentPrice >= trade.takeProfit) hitType = "TP";
+        if (currentPrice <= trade.stopLoss) hitType = "SL";
       }
 
       if (trade.type === "SELL") {
-        if (currentPrice <= trade.takeProfit) {
-          newStatus = "Win";
-          hitType = "TP";
-        } else if (currentPrice >= trade.stopLoss) {
-          newStatus = "Loss";
-          hitType = "SL";
-        }
+        if (currentPrice <= trade.takeProfit) hitType = "TP";
+        if (currentPrice >= trade.stopLoss) hitType = "SL";
       }
 
-      if (!newStatus || !hitType) continue;
+      if (!hitType) continue;
 
       const profit = calculateProfit(
         trade.type,
@@ -93,6 +81,8 @@ export async function GET(req: Request) {
         currentPrice,
         trade.lotSize
       );
+
+      const newStatus: "Win" | "Loss" = profit >= 0 ? "Win" : "Loss";
 
       await prisma.trade.update({
         where: { id: trade.id },
@@ -131,7 +121,10 @@ export async function GET(req: Request) {
           `<b>TP:</b> $${formatMoney(trade.takeProfit)}\n` +
           `<b>SL:</b> $${formatMoney(trade.stopLoss)}\n` +
           `<b>Lot:</b> ${trade.lotSize}\n\n` +
-          `<b>Profit:</b> ${profit >= 0 ? "+" : "-"}$${formatMoney(Math.abs(profit))}`
+          `<b>Profit:</b> ${profit >= 0 ? "+" : "-"}$${formatMoney(
+            Math.abs(profit)
+          )}\n` +
+          `<b>Closed:</b> ${new Date().toLocaleString("en-GB")}`
       );
     }
 

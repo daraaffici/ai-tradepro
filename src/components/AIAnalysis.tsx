@@ -2,37 +2,259 @@
 
 import { useState } from "react";
 
+type AnalysisResult = {
+  symbol: string;
+  price: number;
+  change: number;
+  trend: string;
+  recommendation: "BUY" | "SELL" | "HOLD";
+  confidence: number;
+  risk: string;
+  entry: number;
+  tp1: number;
+  tp2: number;
+  tp3: number;
+  stopLoss: number;
+  riskReward: number;
+  summary: string;
+  createdAt: string;
+};
+
+const symbols = [
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "AAPL",
+  "TSLA",
+  "NVDA",
+  "MSFT",
+  "AMD",
+];
+
 export default function AIAnalysis() {
-  const [result, setResult] = useState("");
+  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function analyze() {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        symbol: "BTCUSDT",
-      }),
+    try {
+      setLoading(true);
+
+      const res = await fetch(`/api/ai-analysis?symbol=${symbol}`, {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        alert(data.message || "AI Analysis failed");
+        return;
+      }
+
+      setResult({
+        ...data,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error(error);
+      alert("AI Analysis failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveToJournal() {
+    try {
+      if (!result) return;
+
+      if (result.recommendation === "HOLD") {
+        alert("HOLD signal cannot be saved to Trade Journal");
+        return;
+      }
+
+      const user = localStorage.getItem("user");
+
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
+
+      const currentUser = JSON.parse(user);
+
+      const res = await fetch("/api/trades/add-from-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          symbol: result.symbol,
+          type: result.recommendation,
+          entry: result.entry,
+          takeProfit: result.tp3,
+          stopLoss: result.stopLoss,
+          lotSize: 1,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        await fetch("/api/signals/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            symbol: result.symbol,
+            signal: result.recommendation,
+            entry: result.entry,
+            tp1: result.tp1,
+            tp2: result.tp2,
+            tp3: result.tp3,
+            stopLoss: result.stopLoss,
+            confidence: result.confidence,
+            risk: result.risk,
+            riskReward: result.riskReward,
+          }),
+        });
+
+        alert(`${result.symbol} saved to Trade Journal ✅`);
+      } else {
+        alert(data.error || "Failed to save trade");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save trade");
+    }
+  }
+
+  function formatDate(date: string) {
+    return new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
-
-    const data = await res.json();
-
-    setResult(data.analysis);
   }
 
   return (
-    <div className="bg-[var(--input)] rounded-xl p-5 border border-[var(--border)] mt-8">
-      <button
-        onClick={analyze}
-        className="bg-blue-600 px-4 py-2 rounded-lg"
-      >
-        Analyze BTC
-      </button>
+    <div className="bg-[var(--card)] rounded-2xl p-5 border border-[var(--border)] mt-8">
+      <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-5">
+        <div>
+          <h2 className="text-2xl font-bold">AI Analysis</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Generate signal with Entry, TP1, TP2, TP3, SL and Date/Time.
+          </p>
+        </div>
 
-      <div className="mt-4 whitespace-pre-wrap">
-        {result}
+        <div className="flex gap-2">
+          <select
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="bg-[var(--input)] border border-[var(--border)] p-3 rounded-lg"
+          >
+            {symbols.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+
+          <button
+            onClick={analyze}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white font-bold"
+          >
+            {loading ? "Analyzing..." : "Analyze"}
+          </button>
+        </div>
       </div>
+
+      {!result ? (
+        <p className="text-[var(--muted)]">
+          Select a market and click Analyze.
+        </p>
+      ) : (
+        <div className="bg-[var(--input)] rounded-xl p-4 border border-[var(--border)]">
+          <div className="flex justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-xl">{result.symbol}</h3>
+              <p className="text-sm text-[var(--muted)]">
+                Signal Created: {formatDate(result.createdAt)}
+              </p>
+            </div>
+
+            <p
+              className={
+                result.recommendation === "BUY"
+                  ? "text-green-400 font-bold"
+                  : result.recommendation === "SELL"
+                  ? "text-red-400 font-bold"
+                  : "text-yellow-400 font-bold"
+              }
+            >
+              {result.recommendation}
+            </p>
+          </div>
+
+          <p className="text-sm text-[var(--muted)] mt-3">
+            {result.summary}
+          </p>
+
+          <div className="grid md:grid-cols-6 gap-4 mt-5">
+            <div>
+              <p className="text-[var(--muted)] text-sm">Entry</p>
+              <p>${result.entry.toLocaleString()}</p>
+            </div>
+
+            <div>
+              <p className="text-[var(--muted)] text-sm">TP1</p>
+              <p className="text-green-400">${result.tp1.toLocaleString()}</p>
+            </div>
+
+            <div>
+              <p className="text-[var(--muted)] text-sm">TP2</p>
+              <p className="text-green-400">${result.tp2.toLocaleString()}</p>
+            </div>
+
+            <div>
+              <p className="text-[var(--muted)] text-sm">TP3</p>
+              <p className="text-green-400">${result.tp3.toLocaleString()}</p>
+            </div>
+
+            <div>
+              <p className="text-[var(--muted)] text-sm">Stop Loss</p>
+              <p className="text-red-400">
+                ${result.stopLoss.toLocaleString()}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[var(--muted)] text-sm">Confidence</p>
+              <p className="text-yellow-400">{result.confidence}%</p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <div className="text-sm text-[var(--muted)]">
+              Risk: <b>{result.risk}</b> • R/R:{" "}
+              <b className="text-purple-400">1:{result.riskReward}</b>
+            </div>
+
+            <button
+              onClick={saveToJournal}
+              disabled={result.recommendation === "HOLD"}
+              className={
+                result.recommendation === "HOLD"
+                  ? "bg-zinc-600 cursor-not-allowed px-4 py-2 rounded-lg text-white font-bold"
+                  : "bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white font-bold"
+              }
+            >
+              💾 Save To Trade Journal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
