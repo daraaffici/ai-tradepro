@@ -21,10 +21,6 @@ const signalSymbols = [
   "BTCUSDT",
   "ETHUSDT",
   "SOLUSDT",
-  "BNBUSDT",
-  "XRPUSDT",
-  "ADAUSDT",
-  "DOGEUSDT",
   "AAPL",
   "TSLA",
   "NVDA",
@@ -129,6 +125,14 @@ export default function TradeSignals() {
       const data = await res.json();
 
       if (data.success) {
+        await fetch("/api/signals/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(item),
+        });
+
         alert(`${item.symbol} added to Trade Journal ✅`);
       } else {
         alert(data.error || "Failed to add trade");
