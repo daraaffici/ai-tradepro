@@ -64,7 +64,7 @@ export default function TradeSignals() {
               symbol: data.symbol,
               signal: data.recommendation,
               confidence: Number(data.confidence || 0),
-              risk: data.risk,
+              risk: data.risk || "Medium",
               entry: Number(data.entry || 0),
               tp1: Number(data.tp1 || 0),
               tp2: Number(data.tp2 || 0),
@@ -86,6 +86,56 @@ export default function TradeSignals() {
       console.error("Failed to load signals:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function addToJournal(item: SignalItem) {
+    try {
+      if (item.signal === "HOLD") {
+        alert("HOLD signal cannot be added to Trade Journal");
+        return;
+      }
+
+      const user = localStorage.getItem("user");
+
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
+
+      const currentUser = JSON.parse(user);
+
+      if (!currentUser?.id) {
+        alert("User ID not found. Please login again.");
+        return;
+      }
+
+      const res = await fetch("/api/trades/add-from-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          symbol: item.symbol,
+          type: item.signal,
+          entry: item.entry,
+          takeProfit: item.tp3,
+          stopLoss: item.stopLoss,
+          lotSize: 1,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`${item.symbol} added to Trade Journal ✅`);
+      } else {
+        alert(data.error || "Failed to add trade");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to add trade");
     }
   }
 
@@ -118,7 +168,7 @@ export default function TradeSignals() {
               key={item.symbol}
               className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
             >
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center gap-4">
                 <div>
                   <h3 className="font-bold text-lg">{item.symbol}</h3>
                   <p className="text-sm text-[var(--muted)]">
@@ -154,7 +204,7 @@ export default function TradeSignals() {
                 </span>
               </div>
 
-              <div className="grid md:grid-cols-6 gap-4 mt-4">
+              <div className="grid md:grid-cols-5 gap-4 mt-4">
                 <div>
                   <p className="text-[var(--muted)] text-sm">Entry</p>
                   <p>${item.entry.toLocaleString()}</p>
@@ -181,7 +231,9 @@ export default function TradeSignals() {
                     ${item.stopLoss.toLocaleString()}
                   </p>
                 </div>
+              </div>
 
+              <div className="mt-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
                 <div>
                   <p className="text-[var(--muted)] text-sm">Action</p>
                   <p
@@ -196,6 +248,18 @@ export default function TradeSignals() {
                     {item.signal}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => addToJournal(item)}
+                  disabled={item.signal === "HOLD"}
+                  className={
+                    item.signal === "HOLD"
+                      ? "bg-zinc-600 cursor-not-allowed px-4 py-2 rounded-lg text-white font-bold"
+                      : "bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white font-bold"
+                  }
+                >
+                  ➕ Add To Journal
+                </button>
               </div>
             </div>
           ))}
