@@ -7,11 +7,14 @@ type SignalItem = {
   signal: "BUY" | "HOLD" | "SELL";
   confidence: number;
   entry: number;
-  takeProfit: number;
+  tp1: number;
+  tp2: number;
+  tp3: number;
   stopLoss: number;
   risk: string;
   price: number;
   change: number;
+  riskReward: number;
 };
 
 const signalSymbols = [
@@ -35,6 +38,7 @@ export default function TradeSignals() {
 
   useEffect(() => {
     loadSignals();
+
     const interval = setInterval(loadSignals, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -52,49 +56,37 @@ export default function TradeSignals() {
 
             const data = await res.json();
 
-            if (data.error || !data.price || data.price <= 0) return null;
+            if (data.error || !data.price || data.price <= 0) {
+              return null;
+            }
 
             return {
               symbol: data.symbol,
               signal: data.recommendation,
-              confidence: data.confidence,
+              confidence: Number(data.confidence || 0),
               risk: data.risk,
-              entry: data.entry,
-              takeProfit: data.takeProfit,
-              stopLoss: data.stopLoss,
-              price: data.price,
-              change: data.change,
+              entry: Number(data.entry || 0),
+              tp1: Number(data.tp1 || 0),
+              tp2: Number(data.tp2 || 0),
+              tp3: Number(data.tp3 || data.takeProfit || 0),
+              stopLoss: Number(data.stopLoss || 0),
+              price: Number(data.price || 0),
+              change: Number(data.change || 0),
+              riskReward: Number(data.riskReward || 0),
             } as SignalItem;
-          } catch {
+          } catch (error) {
+            console.error(`Failed to load signal for ${symbol}:`, error);
             return null;
           }
         })
       );
 
       setSignals(results.filter(Boolean) as SignalItem[]);
+    } catch (error) {
+      console.error("Failed to load signals:", error);
     } finally {
       setLoading(false);
     }
-  }
-
-  function getTPs(item: SignalItem) {
-    const entry = item.entry;
-    const stop = item.stopLoss;
-    const risk = Math.abs(entry - stop);
-
-    if (item.signal === "SELL") {
-      return {
-        tp1: entry - risk,
-        tp2: entry - risk * 2,
-        tp3: entry - risk * 3,
-      };
-    }
-
-    return {
-      tp1: entry + risk,
-      tp2: entry + risk * 2,
-      tp3: entry + risk * 3,
-    };
   }
 
   return (
@@ -103,7 +95,7 @@ export default function TradeSignals() {
         <div>
           <h2 className="text-xl font-bold">Dynamic Trade Signals</h2>
           <p className="text-sm text-[var(--muted)]">
-            Signals with TP1 / TP2 / TP3 targets.
+            Signals with Entry, TP1, TP2, TP3 and Stop Loss.
           </p>
         </div>
 
@@ -121,23 +113,78 @@ export default function TradeSignals() {
         <p className="text-yellow-400">No valid signals available right now.</p>
       ) : (
         <div className="space-y-4">
-          {signals.map((item) => {
-            const tp = getTPs(item);
+          {signals.map((item) => (
+            <div
+              key={item.symbol}
+              className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-lg">{item.symbol}</h3>
+                  <p className="text-sm text-[var(--muted)]">
+                    ${item.price.toLocaleString()} • {item.change.toFixed(2)}%
+                  </p>
+                </div>
 
-            return (
-              <div
-                key={item.symbol}
-                className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-lg">{item.symbol}</h3>
-                    <p className="text-sm text-[var(--muted)]">
-                      ${item.price.toLocaleString()} • {item.change.toFixed(2)}%
-                    </p>
-                  </div>
+                <span
+                  className={
+                    item.signal === "BUY"
+                      ? "text-green-400 font-bold"
+                      : item.signal === "SELL"
+                      ? "text-red-400 font-bold"
+                      : "text-yellow-400 font-bold"
+                  }
+                >
+                  {item.signal}
+                </span>
+              </div>
 
-                  <span
+              <div className="flex flex-wrap gap-3 mt-3 text-sm">
+                <span className="text-[var(--muted)]">
+                  Confidence:{" "}
+                  <b className="text-yellow-400">{item.confidence}%</b>
+                </span>
+
+                <span className="text-[var(--muted)]">
+                  Risk: <b>{item.risk}</b>
+                </span>
+
+                <span className="text-[var(--muted)]">
+                  R/R: <b className="text-purple-400">1:{item.riskReward}</b>
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-6 gap-4 mt-4">
+                <div>
+                  <p className="text-[var(--muted)] text-sm">Entry</p>
+                  <p>${item.entry.toLocaleString()}</p>
+                </div>
+
+                <div>
+                  <p className="text-[var(--muted)] text-sm">TP1</p>
+                  <p className="text-green-400">${item.tp1.toLocaleString()}</p>
+                </div>
+
+                <div>
+                  <p className="text-[var(--muted)] text-sm">TP2</p>
+                  <p className="text-green-400">${item.tp2.toLocaleString()}</p>
+                </div>
+
+                <div>
+                  <p className="text-[var(--muted)] text-sm">TP3</p>
+                  <p className="text-green-400">${item.tp3.toLocaleString()}</p>
+                </div>
+
+                <div>
+                  <p className="text-[var(--muted)] text-sm">Stop Loss</p>
+                  <p className="text-red-400">
+                    ${item.stopLoss.toLocaleString()}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[var(--muted)] text-sm">Action</p>
+                  <p
                     className={
                       item.signal === "BUY"
                         ? "text-green-400 font-bold"
@@ -147,47 +194,11 @@ export default function TradeSignals() {
                     }
                   >
                     {item.signal}
-                  </span>
-                </div>
-
-                <p className="text-[var(--muted)] text-sm mt-1">
-                  Confidence: {item.confidence}%
-                </p>
-
-                <div className="grid md:grid-cols-6 gap-4 mt-4">
-                  <div>
-                    <p className="text-[var(--muted)] text-sm">Entry</p>
-                    <p>${item.entry.toLocaleString()}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-[var(--muted)] text-sm">TP1</p>
-                    <p className="text-green-400">${tp.tp1.toLocaleString()}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-[var(--muted)] text-sm">TP2</p>
-                    <p className="text-green-400">${tp.tp2.toLocaleString()}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-[var(--muted)] text-sm">TP3</p>
-                    <p className="text-green-400">${tp.tp3.toLocaleString()}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-[var(--muted)] text-sm">Stop Loss</p>
-                    <p className="text-red-400">${item.stopLoss.toLocaleString()}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-[var(--muted)] text-sm">Risk</p>
-                    <p>{item.risk}</p>
-                  </div>
+                  </p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>
