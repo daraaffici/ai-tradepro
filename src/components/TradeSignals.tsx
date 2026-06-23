@@ -52,9 +52,7 @@ export default function TradeSignals() {
 
             const data = await res.json();
 
-            if (data.error || !data.price || data.price <= 0) {
-              return null;
-            }
+            if (data.error || !data.price || data.price <= 0) return null;
 
             return {
               symbol: data.symbol,
@@ -70,76 +68,15 @@ export default function TradeSignals() {
               change: Number(data.change || 0),
               riskReward: Number(data.riskReward || 0),
             } as SignalItem;
-          } catch (error) {
-            console.error(`Failed to load signal for ${symbol}:`, error);
+          } catch {
             return null;
           }
         })
       );
 
       setSignals(results.filter(Boolean) as SignalItem[]);
-    } catch (error) {
-      console.error("Failed to load signals:", error);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function addToJournal(item: SignalItem) {
-    try {
-      if (item.signal === "HOLD") {
-        alert("HOLD signal cannot be added to Trade Journal");
-        return;
-      }
-
-      const user = localStorage.getItem("user");
-
-      if (!user) {
-        alert("Please login first");
-        return;
-      }
-
-      const currentUser = JSON.parse(user);
-
-      if (!currentUser?.id) {
-        alert("User ID not found. Please login again.");
-        return;
-      }
-
-      const res = await fetch("/api/trades/add-from-ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          symbol: item.symbol,
-          type: item.signal,
-          entry: item.entry,
-          takeProfit: item.tp3,
-          stopLoss: item.stopLoss,
-          lotSize: 1,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        await fetch("/api/signals/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(item),
-        });
-
-        alert(`${item.symbol} added to Trade Journal ✅`);
-      } else {
-        alert(data.error || "Failed to add trade");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Failed to add trade");
     }
   }
 
@@ -147,9 +84,9 @@ export default function TradeSignals() {
     <div className="bg-[var(--card)] mt-8 p-5 rounded-2xl border border-[var(--border)]">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-xl font-bold">Dynamic Trade Signals</h2>
+          <h2 className="text-xl font-bold">Trading Signals</h2>
           <p className="text-sm text-[var(--muted)]">
-            Signals with Entry, TP1, TP2, TP3 and Stop Loss.
+            View AI signals with TP1, TP2, TP3 and Stop Loss.
           </p>
         </div>
 
@@ -231,39 +168,8 @@ export default function TradeSignals() {
 
                 <div>
                   <p className="text-[var(--muted)] text-sm">Stop Loss</p>
-                  <p className="text-red-400">
-                    ${item.stopLoss.toLocaleString()}
-                  </p>
+                  <p className="text-red-400">${item.stopLoss.toLocaleString()}</p>
                 </div>
-              </div>
-
-              <div className="mt-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Action</p>
-                  <p
-                    className={
-                      item.signal === "BUY"
-                        ? "text-green-400 font-bold"
-                        : item.signal === "SELL"
-                        ? "text-red-400 font-bold"
-                        : "text-yellow-400 font-bold"
-                    }
-                  >
-                    {item.signal}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => addToJournal(item)}
-                  disabled={item.signal === "HOLD"}
-                  className={
-                    item.signal === "HOLD"
-                      ? "bg-zinc-600 cursor-not-allowed px-4 py-2 rounded-lg text-white font-bold"
-                      : "bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white font-bold"
-                  }
-                >
-                  ➕ Add To Journal
-                </button>
               </div>
             </div>
           ))}

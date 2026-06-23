@@ -36,6 +36,17 @@ export default function AIAnalysis() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
 
+  function formatDate(date: string) {
+    return new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
+
   async function analyze() {
     try {
       setLoading(true);
@@ -64,23 +75,23 @@ export default function AIAnalysis() {
   }
 
   async function saveToJournal() {
+    if (!result) return;
+
+    if (result.recommendation === "HOLD") {
+      alert("HOLD signal cannot be saved to Trade Journal");
+      return;
+    }
+
+    const user = localStorage.getItem("user");
+
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
+
+    const currentUser = JSON.parse(user);
+
     try {
-      if (!result) return;
-
-      if (result.recommendation === "HOLD") {
-        alert("HOLD signal cannot be saved to Trade Journal");
-        return;
-      }
-
-      const user = localStorage.getItem("user");
-
-      if (!user) {
-        alert("Please login first");
-        return;
-      }
-
-      const currentUser = JSON.parse(user);
-
       const res = await fetch("/api/trades/add-from-ai", {
         method: "POST",
         headers: {
@@ -99,45 +110,36 @@ export default function AIAnalysis() {
 
       const data = await res.json();
 
-      if (data.success) {
-        await fetch("/api/signals/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            symbol: result.symbol,
-            signal: result.recommendation,
-            entry: result.entry,
-            tp1: result.tp1,
-            tp2: result.tp2,
-            tp3: result.tp3,
-            stopLoss: result.stopLoss,
-            confidence: result.confidence,
-            risk: result.risk,
-            riskReward: result.riskReward,
-          }),
-        });
-
-        alert(`${result.symbol} saved to Trade Journal ✅`);
-      } else {
+      if (!data.success) {
         alert(data.error || "Failed to save trade");
+        return;
       }
+
+      await fetch("/api/signals/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          symbol: result.symbol,
+          signal: result.recommendation,
+          entry: result.entry,
+          tp1: result.tp1,
+          tp2: result.tp2,
+          tp3: result.tp3,
+          stopLoss: result.stopLoss,
+          confidence: result.confidence,
+          risk: result.risk,
+          riskReward: result.riskReward,
+          createdAt: result.createdAt,
+        }),
+      });
+
+      alert(`${result.symbol} saved to Trade Journal and sent to Telegram ✅`);
     } catch (error) {
       console.error(error);
       alert("Failed to save trade");
     }
-  }
-
-  function formatDate(date: string) {
-    return new Date(date).toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
   }
 
   return (
@@ -146,7 +148,7 @@ export default function AIAnalysis() {
         <div>
           <h2 className="text-2xl font-bold">AI Analysis</h2>
           <p className="text-sm text-[var(--muted)]">
-            Generate signal with Entry, TP1, TP2, TP3, SL and Date/Time.
+            Entry, TP1, TP2, TP3, SL, Confidence and Date / Time.
           </p>
         </div>
 
@@ -171,16 +173,14 @@ export default function AIAnalysis() {
       </div>
 
       {!result ? (
-        <p className="text-[var(--muted)]">
-          Select a market and click Analyze.
-        </p>
+        <p className="text-[var(--muted)]">Select market and click Analyze.</p>
       ) : (
         <div className="bg-[var(--input)] rounded-xl p-4 border border-[var(--border)]">
           <div className="flex justify-between gap-4">
             <div>
               <h3 className="font-bold text-xl">{result.symbol}</h3>
               <p className="text-sm text-[var(--muted)]">
-                Signal Created: {formatDate(result.createdAt)}
+                Date / Time: {formatDate(result.createdAt)}
               </p>
             </div>
 
@@ -197,9 +197,7 @@ export default function AIAnalysis() {
             </p>
           </div>
 
-          <p className="text-sm text-[var(--muted)] mt-3">
-            {result.summary}
-          </p>
+          <p className="text-sm text-[var(--muted)] mt-3">{result.summary}</p>
 
           <div className="grid md:grid-cols-6 gap-4 mt-5">
             <div>
@@ -224,9 +222,7 @@ export default function AIAnalysis() {
 
             <div>
               <p className="text-[var(--muted)] text-sm">Stop Loss</p>
-              <p className="text-red-400">
-                ${result.stopLoss.toLocaleString()}
-              </p>
+              <p className="text-red-400">${result.stopLoss.toLocaleString()}</p>
             </div>
 
             <div>
@@ -236,10 +232,10 @@ export default function AIAnalysis() {
           </div>
 
           <div className="mt-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-            <div className="text-sm text-[var(--muted)]">
+            <p className="text-sm text-[var(--muted)]">
               Risk: <b>{result.risk}</b> • R/R:{" "}
               <b className="text-purple-400">1:{result.riskReward}</b>
-            </div>
+            </p>
 
             <button
               onClick={saveToJournal}
@@ -250,7 +246,7 @@ export default function AIAnalysis() {
                   : "bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white font-bold"
               }
             >
-              💾 Save To Trade Journal
+              💾 Save To Trade Journal + Telegram
             </button>
           </div>
         </div>
