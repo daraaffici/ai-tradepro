@@ -101,6 +101,7 @@ export default function AnalysisPage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        
         userId: user.id,
         symbol: analysis.symbol,
         type: analysis.recommendation,
@@ -108,6 +109,7 @@ export default function AnalysisPage() {
         takeProfit: analysis.tp3,
         stopLoss: analysis.stopLoss,
         lotSize: 1,
+        
       }),
     });
 
@@ -138,7 +140,7 @@ export default function AnalysisPage() {
         risk: analysis.risk,
         riskReward: analysis.riskReward,
         summary: analysis.summary,
-        createdAt: analysis.createdAt,
+        createdAt: new Date().toISOString(),
       }),
     });
 

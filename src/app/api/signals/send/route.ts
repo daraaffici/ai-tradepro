@@ -2,12 +2,6 @@ import { NextResponse } from "next/server";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { formatCambodiaDateTime } from "@/lib/cambodiaTime";
 
-function formatDate(date?: string) {
-  return date
-    ? formatCambodiaDateTime(new Date())
-    : formatCambodiaDateTime(new Date());
-}
-
 function money(value: number) {
   return Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -19,11 +13,13 @@ export async function POST(req: Request) {
   try {
     const signal = await req.json();
 
+    const createdAt = signal.createdAt || new Date();
+
     const message =
       `🚀 <b>AI TRADEPRO SIGNAL SAVED</b>\n\n` +
       `<b>Symbol:</b> ${signal.symbol}\n` +
       `<b>Action:</b> ${signal.signal}\n` +
-      `<b>Date / Time:</b> ${formatDate(signal.createdAt)}\n\n` +
+      `<b>Date / Time:</b> ${formatCambodiaDateTime(createdAt)}\n\n` +
       `<b>Trend:</b> ${signal.trend || "-"}\n` +
       `<b>Confidence:</b> ${signal.confidence}%\n` +
       `<b>Risk:</b> ${signal.risk}\n\n` +
@@ -39,7 +35,10 @@ export async function POST(req: Request) {
 
     await sendTelegramMessage(message);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      sentAt: formatCambodiaDateTime(new Date()),
+    });
   } catch (error: any) {
     return NextResponse.json(
       {
