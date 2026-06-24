@@ -4,7 +4,7 @@ import { formatCambodiaDateTime } from "@/lib/cambodiaTime";
 
 function formatDate(date?: string) {
   return date
-    ? new Date(date).toLocaleString("en-GB")
+    ? formatCambodiaDateTime(new Date())
     : formatCambodiaDateTime(new Date());
 }
 
