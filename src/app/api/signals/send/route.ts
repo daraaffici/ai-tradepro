@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { formatCambodiaDateTime } from "@/lib/cambodiaTime";
 
 function formatDate(date?: string) {
   return date
     ? new Date(date).toLocaleString("en-GB")
-    : new Date().toLocaleString("en-GB");
+    : formatCambodiaDateTime(new Date());
 }
 
 function money(value: number) {

@@ -36,7 +36,7 @@ export default function TradeHistory({ period = "all" }: Props) {
       const data = await res.json();
       setTrades(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to load trade history:", error);
+      console.error(error);
       setTrades([]);
     } finally {
       setLoading(false);
@@ -45,6 +45,7 @@ export default function TradeHistory({ period = "all" }: Props) {
 
   function formatDate(date: string) {
     return new Date(date).toLocaleString("en-GB", {
+      timeZone: "Asia/Phnom_Penh",
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -63,7 +64,7 @@ export default function TradeHistory({ period = "all" }: Props) {
         <p className="text-[var(--muted)]">No closed trades found.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="p-3">Date / Time</th>
@@ -78,12 +79,8 @@ export default function TradeHistory({ period = "all" }: Props) {
 
             <tbody>
               {trades.map((trade) => (
-                <tr
-                  key={trade.id}
-                  className="border-b border-[var(--border)]"
-                >
+                <tr key={trade.id} className="border-b border-[var(--border)]">
                   <td className="p-3">{formatDate(trade.createdAt)}</td>
-
                   <td className="p-3 font-bold">{trade.symbol}</td>
 
                   <td
@@ -96,9 +93,7 @@ export default function TradeHistory({ period = "all" }: Props) {
                     {trade.type}
                   </td>
 
-                  <td className="p-3">
-                    ${Number(trade.entry).toLocaleString()}
-                  </td>
+                  <td className="p-3">${Number(trade.entry).toLocaleString()}</td>
 
                   <td className="p-3">
                     {trade.closePrice

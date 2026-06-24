@@ -1,37 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import {
+  formatCambodiaDateTime,
+  getCambodiaPeriodFilter,
+} from "@/lib/cambodiaTime";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const period = url.searchParams.get("period") || "all";
 
-  const now = new Date();
   const where: any = {};
 
-  if (period === "today") {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
+  const dateFilter = getCambodiaPeriodFilter(period);
 
-    where.createdAt = {
-      gte: start,
-    };
-  }
-
-  if (period === "week") {
-    const start = new Date();
-    start.setDate(now.getDate() - 7);
-
-    where.createdAt = {
-      gte: start,
-    };
-  }
-
-  if (period === "month") {
-    const start = new Date();
-    start.setMonth(now.getMonth() - 1);
-
-    where.createdAt = {
-      gte: start,
-    };
+  if (dateFilter) {
+    where.createdAt = dateFilter;
   }
 
   const trades = await prisma.trade.findMany({
@@ -55,7 +37,7 @@ export async function GET(req: Request) {
   ];
 
   const rows = trades.map((trade) => [
-    new Date(trade.createdAt).toLocaleString("en-GB"),
+    formatCambodiaDateTime(trade.createdAt),
     trade.symbol,
     trade.type,
     trade.entry,
@@ -74,12 +56,10 @@ export async function GET(req: Request) {
     ),
   ].join("\n");
 
-  const filename = `trade-history-${period}.csv`;
-
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename=${filename}`,
+      "Content-Disposition": `attachment; filename=trade-history-${period}.csv`,
     },
   });
 }

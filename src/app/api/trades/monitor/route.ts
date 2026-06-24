@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { formatCambodiaDateTime } from "@/lib/cambodiaTime";
 
 async function getPrice(baseUrl: string, symbol: string) {
   const res = await fetch(`${baseUrl}/api/market/all-price?symbol=${symbol}`, {
@@ -124,7 +125,7 @@ export async function GET(req: Request) {
           `<b>Profit:</b> ${profit >= 0 ? "+" : "-"}$${formatMoney(
             Math.abs(profit)
           )}\n` +
-          `<b>Closed:</b> ${new Date().toLocaleString("en-GB")}`
+          `<b>Closed:</b> ${formatCambodiaDateTime(new Date())}`
       );
     }
 
