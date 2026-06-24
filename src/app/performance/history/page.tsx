@@ -22,17 +22,26 @@ export default function TradeHistoryPage() {
           <Header />
 
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">Trade History</h1>
+            <h1 className="text-3xl font-bold">
+              Trade History
+            </h1>
 
-            <Link
-              href="/performance"
-              className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-xl text-white font-bold"
-            >
-              ← Back
-            </Link>
+            <div className="flex gap-3">
+              <a
+                href="/api/trades/export"
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-white font-bold"
+              >
+                Download CSV
+              </a>
+
+              <Link
+                href="/performance"
+                className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-xl text-white font-bold"
+              >
+                ← Back
+              </Link>
+            </div>
           </div>
-
-          <TradeHistory />
         </main>
       </div>
     </AuthGuard>
