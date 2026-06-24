@@ -2,12 +2,26 @@ import { NextResponse } from "next/server";
 import { economicEvents } from "@/lib/economicEvents";
 import { sendTelegramMessage } from "@/lib/telegram";
 
+function checkCronSecret(req: Request) {
+  const url = new URL(req.url);
+  const secret = url.searchParams.get("secret");
+
+  return secret === process.env.CRON_SECRET;
+}
+
 function eventDateTimeCambodia(date: string, time: string) {
   return new Date(`${date}T${time}:00+07:00`);
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    if (!checkCronSecret(req)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const now = new Date();
     const upcoming = [];
 
@@ -15,6 +29,7 @@ export async function GET() {
       if (item.impact !== "High") continue;
 
       const eventTime = eventDateTimeCambodia(item.date, item.time);
+
       const diffMinutes =
         (eventTime.getTime() - now.getTime()) / 1000 / 60;
 
