@@ -11,6 +11,14 @@
     {
       "path": "/api/reports/monthly",
       "schedule": "0 15 1 * *"
+    },
+    {
+      "path": "/api/reports/daily",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/calendar/check",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
