@@ -55,7 +55,7 @@ export default function TradeHistoryPage() {
             </div>
           </div>
 
-          <TradeHistory />
+          <TradeHistory period={period} />
         </main>
       </div>
     </AuthGuard>

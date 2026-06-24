@@ -2,25 +2,48 @@
 
 import { useEffect, useState } from "react";
 
-export default function TradeHistory() {
-  const [trades, setTrades] = useState<any[]>([]);
+type Trade = {
+  id: number;
+  symbol: string;
+  type: string;
+  entry: number;
+  closePrice: number | null;
+  profit: number | null;
+  status: string;
+  createdAt: string;
+};
+
+type Props = {
+  period?: string;
+};
+
+export default function TradeHistory({ period = "all" }: Props) {
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadTrades();
-  }, []);
+  }, [period]);
 
   async function loadTrades() {
-    const res = await fetch("/api/trades/history", {
-      cache: "no-store",
-    });
+    try {
+      setLoading(true);
 
-    const data = await res.json();
-    setTrades(data);
+      const res = await fetch(`/api/trades/history?period=${period}`, {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+      setTrades(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to load trade history:", error);
+      setTrades([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function formatDate(date: string) {
-    if (!date) return "-";
-
     return new Date(date).toLocaleString("en-GB", {
       day: "2-digit",
       month: "2-digit",
@@ -32,71 +55,82 @@ export default function TradeHistory() {
 
   return (
     <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
-      <h2 className="text-2xl font-bold mb-5">Closed Trades History</h2>
+      <h2 className="text-2xl font-bold mb-6">Closed Trades History</h2>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px]">
-          <thead>
-            <tr className="border-b border-[var(--border)]">
-              <th className="text-left p-3">Date / Time</th>
-              <th className="text-left p-3">Symbol</th>
-              <th className="text-left p-3">Type</th>
-              <th className="text-left p-3">Entry</th>
-              <th className="text-left p-3">Close</th>
-              <th className="text-left p-3">Profit</th>
-              <th className="text-left p-3">Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {trades.map((trade) => (
-              <tr key={trade.id} className="border-b border-[var(--border)]">
-                <td className="p-3">
-                  {formatDate(trade.updatedAt || trade.createdAt)}
-                </td>
-
-                <td className="p-3 font-bold">{trade.symbol}</td>
-
-                <td
-                  className={
-                    trade.type === "BUY"
-                      ? "p-3 text-green-400"
-                      : "p-3 text-red-400"
-                  }
-                >
-                  {trade.type}
-                </td>
-
-                <td className="p-3">${Number(trade.entry || 0).toLocaleString()}</td>
-
-                <td className="p-3">
-                  ${Number(trade.closePrice || 0).toLocaleString()}
-                </td>
-
-                <td
-                  className={
-                    Number(trade.profit || 0) >= 0
-                      ? "p-3 font-bold text-green-400"
-                      : "p-3 font-bold text-red-400"
-                  }
-                >
-                  ${Number(trade.profit || 0).toFixed(2)}
-                </td>
-
-                <td
-                  className={
-                    trade.status === "Win"
-                      ? "p-3 font-bold text-green-400"
-                      : "p-3 font-bold text-red-400"
-                  }
-                >
-                  {trade.status}
-                </td>
+      {loading ? (
+        <p className="text-[var(--muted)]">Loading trade history...</p>
+      ) : trades.length === 0 ? (
+        <p className="text-[var(--muted)]">No closed trades found.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="p-3">Date / Time</th>
+                <th className="p-3">Symbol</th>
+                <th className="p-3">Type</th>
+                <th className="p-3">Entry</th>
+                <th className="p-3">Close</th>
+                <th className="p-3">Profit</th>
+                <th className="p-3">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {trades.map((trade) => (
+                <tr
+                  key={trade.id}
+                  className="border-b border-[var(--border)]"
+                >
+                  <td className="p-3">{formatDate(trade.createdAt)}</td>
+
+                  <td className="p-3 font-bold">{trade.symbol}</td>
+
+                  <td
+                    className={
+                      trade.type === "BUY"
+                        ? "p-3 text-green-400"
+                        : "p-3 text-red-400"
+                    }
+                  >
+                    {trade.type}
+                  </td>
+
+                  <td className="p-3">
+                    ${Number(trade.entry).toLocaleString()}
+                  </td>
+
+                  <td className="p-3">
+                    {trade.closePrice
+                      ? `$${Number(trade.closePrice).toLocaleString()}`
+                      : "-"}
+                  </td>
+
+                  <td
+                    className={
+                      Number(trade.profit || 0) >= 0
+                        ? "p-3 text-green-400 font-bold"
+                        : "p-3 text-red-400 font-bold"
+                    }
+                  >
+                    ${Number(trade.profit || 0).toFixed(2)}
+                  </td>
+
+                  <td
+                    className={
+                      trade.status === "Win"
+                        ? "p-3 text-green-400 font-bold"
+                        : "p-3 text-red-400 font-bold"
+                    }
+                  >
+                    {trade.status}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
