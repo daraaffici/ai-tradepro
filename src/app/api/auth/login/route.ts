@@ -14,40 +14,36 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "User not found",
-        },
+        { success: false, error: "User not found" },
         { status: 404 }
       );
     }
 
-    const validPassword = await bcrypt.compare(
-        body.password,
-        user.password
-    );
+    const validPassword = await bcrypt.compare(body.password, user.password);
 
     if (!validPassword) {
-        return NextResponse.json(
-            {
-                success: false,
-                error: "Invalid password",
-            },
-            { status: 401 }
-        );
+      return NextResponse.json(
+        { success: false, error: "Invalid password" },
+        { status: 401 }
+      );
     }
+
+    const safeUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
 
     return NextResponse.json({
       success: true,
       message: "Login success",
-      user,
+      user: safeUser,
     });
   } catch (error) {
     return NextResponse.json(
-      {
-        success: false,
-        error: "Login failed",
-      },
+      { success: false, error: "Login failed" },
       { status: 500 }
     );
   }

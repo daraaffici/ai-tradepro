@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-
-  watchlists Watchlist[]
-  portfolios Portfolio[]
-  trades Trade[]
-}
-
 model Watchlist {
   id        Int      @id @default(autoincrement())
   symbol    String
@@ -63,4 +51,17 @@ model PriceAlert {
   targetPrice Float
   triggered   Boolean  @default(false)
   createdAt   DateTime @default(now())
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+
+  watchlists Watchlist[]
+  portfolios Portfolio[]
+  trades     Trade[]
 }
