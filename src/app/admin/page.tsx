@@ -80,18 +80,28 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <button
-              onClick={loadAdminStats}
-              className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl text-white font-bold"
-            >
-              Refresh
-            </button>
-            <Link
-              href="/admin/users"
-              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-white font-bold"
-            >
-              Users
-            </Link>
+           <div className="flex flex-wrap gap-3">
+              <Link
+                href="/admin/users"
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-white font-bold"
+              >
+                Users
+              </Link>
+
+              <Link
+                href="/admin/trades"
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl text-white font-bold"
+              >
+                Trades
+              </Link>
+
+              <button
+                onClick={loadAdminStats}
+                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl text-white font-bold"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
 
           {loading ? (
