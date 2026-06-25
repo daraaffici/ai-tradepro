@@ -7,65 +7,45 @@ type NewsItem = {
   source: string;
   publishedAt: string;
   category: string;
-  impact: "High" | "Medium" | "Low";
+  impact: "High";
 };
 
-function detectImpact(title: string, description: string): "High" | "Medium" | "Low" {
+function detectCategory(title: string, description: string) {
   const text = `${title} ${description}`.toLowerCase();
 
-  const highKeywords = [
-    "federal reserve",
-    "fed",
-    "interest rate",
-    "rate cut",
-    "rate hike",
-    "inflation",
-    "cpi",
-    "ppi",
-    "nfp",
-    "non-farm",
-    "fomc",
-    "gdp",
-    "recession",
-    "war",
-    "crash",
-    "bank crisis",
-    "tariff",
-    "sanction",
-  ];
-
-  const mediumKeywords = [
-    "bitcoin",
-    "ethereum",
-    "crypto",
-    "gold",
-    "oil",
-    "earnings",
-    "tesla",
-    "apple",
-    "nvidia",
-    "microsoft",
-    "stocks",
-    "forex",
-    "dollar",
-    "xauusd",
-  ];
-
-  if (highKeywords.some((word) => text.includes(word))) {
-    return "High";
+  if (
+    text.includes("war") ||
+    text.includes("conflict") ||
+    text.includes("missile") ||
+    text.includes("attack") ||
+    text.includes("israel") ||
+    text.includes("iran") ||
+    text.includes("russia") ||
+    text.includes("ukraine")
+  ) {
+    return "Geopolitical";
   }
 
-  if (mediumKeywords.some((word) => text.includes(word))) {
-    return "Medium";
+  if (
+    text.includes("federal reserve") ||
+    text.includes("fed") ||
+    text.includes("cpi") ||
+    text.includes("inflation") ||
+    text.includes("interest rate") ||
+    text.includes("fomc") ||
+    text.includes("nfp") ||
+    text.includes("gdp")
+  ) {
+    return "Macro";
   }
 
-  return "Low";
-}
-
-function detectCategory(title: string, description: string, fallback: string) {
-  const text = `${title} ${description}`.toLowerCase();
-
-  if (text.includes("bitcoin") || text.includes("ethereum") || text.includes("crypto")) {
+  if (
+    text.includes("bitcoin") ||
+    text.includes("ethereum") ||
+    text.includes("crypto") ||
+    text.includes("etf") ||
+    text.includes("sec")
+  ) {
     return "Crypto";
   }
 
@@ -73,28 +53,83 @@ function detectCategory(title: string, description: string, fallback: string) {
     return "Gold";
   }
 
-  if (text.includes("forex") || text.includes("dollar") || text.includes("eurusd")) {
-    return "Forex";
+  if (
+    text.includes("oil") ||
+    text.includes("opec") ||
+    text.includes("crude")
+  ) {
+    return "Oil";
   }
 
   if (
     text.includes("stock") ||
-    text.includes("tesla") ||
-    text.includes("apple") ||
+    text.includes("nasdaq") ||
+    text.includes("s&p") ||
+    text.includes("dow") ||
     text.includes("nvidia") ||
-    text.includes("microsoft")
+    text.includes("tesla")
   ) {
     return "Stocks";
   }
 
-  return fallback;
+  return "Market";
 }
 
-export async function GET(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const category = url.searchParams.get("category") || "All";
+function isHighImpact(title: string, description: string) {
+  const text = `${title} ${description}`.toLowerCase();
 
+  const keywords = [
+    "war",
+    "conflict",
+    "missile",
+    "attack",
+    "geopolitical",
+    "sanction",
+    "tariff",
+
+    "federal reserve",
+    "fed",
+    "interest rate",
+    "rate cut",
+    "rate hike",
+    "fomc",
+    "inflation",
+    "cpi",
+    "ppi",
+    "nfp",
+    "non-farm",
+    "gdp",
+    "recession",
+
+    "bank crisis",
+    "bank collapse",
+    "market crash",
+    "selloff",
+    "liquidation",
+
+    "bitcoin etf",
+    "spot etf",
+    "sec approval",
+    "sec lawsuit",
+
+    "gold price",
+    "oil price",
+    "opec",
+    "crude oil",
+  ];
+
+  return keywords.some((word) => text.includes(word));
+}
+
+function isFreshNews(publishedAt: string) {
+  const published = new Date(publishedAt).getTime();
+  const hours = (Date.now() - published) / (1000 * 60 * 60);
+
+  return hours >= 0 && hours <= 24;
+}
+
+export async function GET() {
+  try {
     const apiKey = process.env.GNEWS_API_KEY;
 
     if (!apiKey) {
@@ -107,33 +142,25 @@ export async function GET(req: Request) {
           source: "AI TradePro",
           publishedAt: new Date().toISOString(),
           category: "System",
-          impact: "Low",
+          impact: "High",
         },
       ]);
     }
 
-    const topics =
-      category === "Crypto"
-        ? [{ query: "bitcoin OR ethereum OR crypto market", category: "Crypto" }]
-        : category === "Forex"
-        ? [{ query: "forex market OR Federal Reserve OR dollar", category: "Forex" }]
-        : category === "Gold"
-        ? [{ query: "gold price OR XAUUSD OR precious metals", category: "Gold" }]
-        : category === "Stocks"
-        ? [{ query: "stock market OR Apple OR Tesla OR Nvidia", category: "Stocks" }]
-        : [
-            { query: "Federal Reserve inflation CPI stock market", category: "Macro" },
-            { query: "bitcoin ethereum crypto market", category: "Crypto" },
-            { query: "gold price XAUUSD", category: "Gold" },
-            { query: "forex market dollar Federal Reserve", category: "Forex" },
-            { query: "stock market Apple Tesla Nvidia Microsoft", category: "Stocks" },
-          ];
+    const queries = [
+      "war OR conflict OR missile OR attack OR sanctions market",
+      "Federal Reserve OR interest rate OR CPI OR inflation OR FOMC OR NFP",
+      "market crash OR recession OR bank crisis OR selloff",
+      "Bitcoin ETF OR SEC crypto OR crypto liquidation",
+      "gold price OR XAUUSD OR oil price OR OPEC",
+      "stock market OR Nasdaq OR S&P 500 OR Nvidia OR Tesla",
+    ];
 
     const results = await Promise.allSettled(
-      topics.map(async (topic) => {
+      queries.map(async (query) => {
         const res = await fetch(
           `https://gnews.io/api/v4/search?q=${encodeURIComponent(
-            topic.query
+            query
           )}&lang=en&max=10&sortby=publishedAt&apikey=${apiKey}`,
           { cache: "no-store" }
         );
@@ -144,26 +171,33 @@ export async function GET(req: Request) {
           return [];
         }
 
-        return (data.articles || []).map((article: any) => {
-          const title = article.title || "Untitled";
-          const description = article.description || "";
+        return (data.articles || [])
+          .map((article: any) => {
+            const title = article.title || "Untitled";
+            const description = article.description || "";
+            const publishedAt =
+              article.publishedAt || new Date().toISOString();
 
-          return {
-            title,
-            description,
-            url: article.url || "#",
-            source: article.source?.name || "Unknown",
-            publishedAt: article.publishedAt || new Date().toISOString(),
-            category: detectCategory(title, description, topic.category),
-            impact: detectImpact(title, description),
-          } as NewsItem;
-        });
+            if (!isFreshNews(publishedAt)) return null;
+            if (!isHighImpact(title, description)) return null;
+
+            return {
+              title,
+              description,
+              url: article.url || "#",
+              source: article.source?.name || "Unknown",
+              publishedAt,
+              category: detectCategory(title, description),
+              impact: "High",
+            } as NewsItem;
+          })
+          .filter(Boolean);
       })
     );
 
     const news = results.flatMap((result) =>
       result.status === "fulfilled" ? result.value : []
-    );
+    ) as NewsItem[];
 
     const uniqueNews = news
       .filter(
@@ -175,38 +209,35 @@ export async function GET(req: Request) {
           new Date(b.publishedAt).getTime() -
           new Date(a.publishedAt).getTime()
       )
-      .slice(0, 30);
+      .slice(0, 20);
 
     return NextResponse.json(
       uniqueNews.length
         ? uniqueNews
         : [
             {
-              title: "No latest market news found",
+              title: "No high-impact market news found in the last 24 hours",
               description:
-                "Try refreshing again later or check your GNews API limit.",
+                "AI TradePro is filtering only important market-moving news such as war, CPI, Fed, NFP, Bitcoin ETF, gold, oil, and stock market shocks.",
               url: "#",
               source: "AI TradePro",
               publishedAt: new Date().toISOString(),
               category: "System",
-              impact: "Low",
+              impact: "High",
             },
           ]
     );
   } catch (error: any) {
-    return NextResponse.json(
-      [
-        {
-          title: "Failed to fetch market news",
-          description: error.message || "Unknown news API error.",
-          url: "#",
-          source: "AI TradePro",
-          publishedAt: new Date().toISOString(),
-          category: "System",
-          impact: "Low",
-        },
-      ],
-      { status: 200 }
-    );
+    return NextResponse.json([
+      {
+        title: "Failed to fetch high-impact market news",
+        description: error.message || "Unknown news API error.",
+        url: "#",
+        source: "AI TradePro",
+        publishedAt: new Date().toISOString(),
+        category: "System",
+        impact: "High",
+      },
+    ]);
   }
 }
