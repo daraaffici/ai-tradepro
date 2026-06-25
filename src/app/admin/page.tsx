@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
 import AdminCard from "@/components/AdminCard";
+import Link from "next/link";
 
 type AdminStats = {
   totalUsers: number;
@@ -85,6 +86,12 @@ export default function AdminPage() {
             >
               Refresh
             </button>
+            <Link
+              href="/admin/users"
+              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-white font-bold"
+            >
+              Users
+            </Link>
           </div>
 
           {loading ? (
