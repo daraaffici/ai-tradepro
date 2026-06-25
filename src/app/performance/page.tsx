@@ -6,6 +6,13 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
 
+type TradeSummary = {
+  symbol: string;
+  type: string;
+  profit: number;
+  createdAt: string;
+};
+
 type Stats = {
   totalTrades: number;
   openTrades: number;
@@ -18,19 +25,24 @@ type Stats = {
   totalLoss: number;
   netProfit: number;
   winRate: number;
-  bestTrade: {
-    symbol: string;
-    profit: number;
-  } | null;
-  worstTrade: {
-    symbol: string;
-    profit: number;
-  } | null;
+  bestTrade: TradeSummary | null;
+  worstTrade: TradeSummary | null;
 };
 
 function money(value: number) {
   const sign = value >= 0 ? "" : "-";
   return `${sign}$${Math.abs(value).toFixed(2)}`;
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleString("en-GB", {
+    timeZone: "Asia/Phnom_Penh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function PerformancePage() {
@@ -114,23 +126,17 @@ export default function PerformancePage() {
             <div className="grid md:grid-cols-4 gap-4">
               <div className={cardClass}>
                 <p className="text-[var(--muted)]">Total BUY/SELL Trades</p>
-                <h2 className="text-3xl font-bold mt-3">
-                  {stats.totalTrades}
-                </h2>
+                <h2 className="text-3xl font-bold mt-3">{stats.totalTrades}</h2>
               </div>
 
               <div className={cardClass}>
                 <p className="text-[var(--muted)]">Open Trades</p>
-                <h2 className="text-3xl font-bold mt-3">
-                  {stats.openTrades}
-                </h2>
+                <h2 className="text-3xl font-bold mt-3">{stats.openTrades}</h2>
               </div>
 
               <div className={cardClass}>
                 <p className="text-[var(--muted)]">Closed Trades</p>
-                <h2 className="text-3xl font-bold mt-3">
-                  {stats.closedTrades}
-                </h2>
+                <h2 className="text-3xl font-bold mt-3">{stats.closedTrades}</h2>
               </div>
 
               <div className={cardClass}>
@@ -197,22 +203,42 @@ export default function PerformancePage() {
 
               <div className={cardClass}>
                 <p className="text-[var(--muted)]">Best Trade</p>
-                <h2 className="text-xl font-bold text-green-400 mt-3">
-                  {stats.bestTrade?.symbol || "-"}
-                </h2>
-                <p className="text-green-400 font-bold">
-                  {stats.bestTrade ? money(stats.bestTrade.profit) : "$0.00"}
-                </p>
+
+                {stats.bestTrade ? (
+                  <>
+                    <h2 className="text-xl font-bold text-green-400 mt-3">
+                      {stats.bestTrade.symbol} {stats.bestTrade.type}
+                    </h2>
+                    <p className="text-green-400 font-bold">
+                      {money(stats.bestTrade.profit)}
+                    </p>
+                    <p className="text-sm text-[var(--muted)] mt-1">
+                      {formatDate(stats.bestTrade.createdAt)}
+                    </p>
+                  </>
+                ) : (
+                  <h2 className="text-xl font-bold mt-3">-</h2>
+                )}
               </div>
 
               <div className={cardClass}>
                 <p className="text-[var(--muted)]">Worst Trade</p>
-                <h2 className="text-xl font-bold text-red-400 mt-3">
-                  {stats.worstTrade?.symbol || "-"}
-                </h2>
-                <p className="text-red-400 font-bold">
-                  {stats.worstTrade ? money(stats.worstTrade.profit) : "$0.00"}
-                </p>
+
+                {stats.worstTrade ? (
+                  <>
+                    <h2 className="text-xl font-bold text-red-400 mt-3">
+                      {stats.worstTrade.symbol} {stats.worstTrade.type}
+                    </h2>
+                    <p className="text-red-400 font-bold">
+                      {money(stats.worstTrade.profit)}
+                    </p>
+                    <p className="text-sm text-[var(--muted)] mt-1">
+                      {formatDate(stats.worstTrade.createdAt)}
+                    </p>
+                  </>
+                ) : (
+                  <h2 className="text-xl font-bold mt-3">-</h2>
+                )}
               </div>
             </div>
           )}

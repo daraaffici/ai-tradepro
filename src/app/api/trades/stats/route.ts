@@ -8,7 +8,6 @@ export async function GET(req: Request) {
     const period = url.searchParams.get("period") || "all";
 
     const dateFilter = getCambodiaPeriodFilter(period);
-
     const where: any = {};
 
     if (dateFilter) {
@@ -17,9 +16,7 @@ export async function GET(req: Request) {
 
     const trades = await prisma.trade.findMany({
       where,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
 
     const totalTrades = trades.length;
@@ -77,13 +74,17 @@ export async function GET(req: Request) {
       bestTrade: bestTrade
         ? {
             symbol: bestTrade.symbol,
+            type: bestTrade.type,
             profit: Number(bestTrade.profit || 0),
+            createdAt: bestTrade.createdAt,
           }
         : null,
       worstTrade: worstTrade
         ? {
             symbol: worstTrade.symbol,
+            type: worstTrade.type,
             profit: Number(worstTrade.profit || 0),
+            createdAt: worstTrade.createdAt,
           }
         : null,
     });
