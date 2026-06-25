@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Sidebar from "@/components/Sidebar";
+import AdminSidebar from "@/components/AdminSidebar";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
 import AdminGuard from "@/components/AdminGuard";
@@ -67,7 +67,7 @@ export default function AdminPage() {
             color: "var(--foreground)",
           }}
         >
-          <Sidebar />
+          <AdminSidebar />
 
           <main className="flex-1 w-full p-4 lg:p-6 overflow-x-hidden">
             <Header />
