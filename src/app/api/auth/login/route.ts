@@ -7,15 +7,20 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const user = await prisma.user.findUnique({
-      where: {
-        email: body.email,
-      },
+      where: { email: body.email },
     });
 
     if (!user) {
       return NextResponse.json(
         { success: false, error: "User not found" },
         { status: 404 }
+      );
+    }
+
+    if (user.status === "Disabled") {
+      return NextResponse.json(
+        { success: false, error: "Your account has been disabled" },
+        { status: 403 }
       );
     }
 
@@ -28,18 +33,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const safeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
-    };
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
 
     return NextResponse.json({
       success: true,
       message: "Login success",
-      user: safeUser,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        phone: updatedUser.phone,
+        country: updatedUser.country,
+        lastLogin: updatedUser.lastLogin,
+        createdAt: updatedUser.createdAt,
+      },
     });
   } catch (error) {
     return NextResponse.json(

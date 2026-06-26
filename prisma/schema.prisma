@@ -13,7 +13,7 @@ model Watchlist {
   userId    Int
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Portfolio {
@@ -24,7 +24,7 @@ model Portfolio {
   userId    Int
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Trade {
@@ -41,7 +41,7 @@ model Trade {
   closePrice Float?
   profit     Float?
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PriceAlert {
@@ -54,12 +54,17 @@ model PriceAlert {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
-  email     String   @unique
+  email     String    @unique
   password  String
-  role      String   @default("USER")
-  createdAt DateTime @default(now())
+  role      String    @default("USER")
+  status    String    @default("Active")
+  phone     String?
+  country   String?
+  lastLogin DateTime?
+  avatar    String?
+  createdAt DateTime  @default(now())
 
   watchlists Watchlist[]
   portfolios Portfolio[]

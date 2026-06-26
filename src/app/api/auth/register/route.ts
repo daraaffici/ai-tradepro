@@ -7,9 +7,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const existingUser = await prisma.user.findUnique({
-      where: {
-        email: body.email,
-      },
+      where: { email: body.email },
     });
 
     if (existingUser) {
@@ -26,26 +24,28 @@ export async function POST(req: Request) {
         name: body.name,
         email: body.email,
         password: hashedPassword,
+        phone: body.phone || null,
+        country: body.country || null,
         role: "USER",
+        status: "Active",
       },
     });
-
-    const safeUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
-    };
 
     return NextResponse.json({
       success: true,
       message: "Register success",
-      user: safeUser,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        phone: user.phone,
+        country: user.country,
+        createdAt: user.createdAt,
+      },
     });
   } catch (error: any) {
-    console.error("REGISTER_ERROR:", error);
-
     return NextResponse.json(
       { success: false, error: error.message || "Register failed" },
       { status: 500 }
