@@ -38,7 +38,6 @@ export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [category, setCategory] = useState("All");
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     loadNews();
@@ -71,41 +70,6 @@ export default function NewsPage() {
       setLoading(false);
     }
   }
-
-  async function sendNewsToTelegram() {
-    try {
-      if (news.length === 0) {
-        alert("No news to send");
-        return;
-      }
-
-      setSending(true);
-
-      const res = await fetch("/api/news/send-impact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          news,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert(`News Impact sent to Telegram ✅ (${data.sent} news)`);
-      } else {
-        alert(data.error || "No high impact news to send");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Failed to send news to Telegram");
-    } finally {
-      setSending(false);
-    }
-  }
-
   return (
     <AuthGuard>
       <div
@@ -147,14 +111,6 @@ export default function NewsPage() {
                 className="bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-700 px-4 py-2 rounded-xl text-white font-bold"
               >
                 {loading ? "Loading..." : "Refresh News"}
-              </button>
-
-              <button
-                onClick={sendNewsToTelegram}
-                disabled={sending || news.length === 0}
-                className="bg-green-600 hover:bg-green-700 disabled:bg-zinc-700 px-4 py-2 rounded-xl text-white font-bold"
-              >
-                {sending ? "Sending..." : "Send Impact to Telegram"}
               </button>
             </div>
           </div>
