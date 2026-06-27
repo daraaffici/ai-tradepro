@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import NotificationBell from "@/components/admin/NotificationBell";
 
 const supportedSymbols = [
   "BTCUSDT",
@@ -46,6 +47,9 @@ export default function Header() {
         <p className="text-green-400 text-sm">
           ● Live Data (Auto Refresh 30s)
         </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <NotificationBell />
       </div>
 
       <div className="flex w-full lg:w-auto">

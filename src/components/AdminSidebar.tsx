@@ -9,6 +9,7 @@ const adminMenus = [
   { name: "Trades", href: "/admin/trades", icon: "📈" },
   { name: "Analytics", href: "/admin/analytics", icon: "📉" },
   { name: "Activity Logs", href: "/admin/logs", icon: "📝" },
+  { name: "Notifications", href: "/admin/notifications", icon: "🔔" },
   { name: "System", href: "/admin/system", icon: "⚙️" },
 ];
 
