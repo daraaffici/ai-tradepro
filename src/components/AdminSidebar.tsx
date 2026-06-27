@@ -8,6 +8,7 @@ const adminMenus = [
   { name: "Users", href: "/admin/users", icon: "👥" },
   { name: "Trades", href: "/admin/trades", icon: "📈" },
   { name: "Analytics", href: "/admin/analytics", icon: "📉" },
+  { name: "Activity Logs", href: "/admin/logs", icon: "📝" },
   { name: "System", href: "/admin/system", icon: "⚙️" },
 ];
 

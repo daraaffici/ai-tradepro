@@ -9,8 +9,11 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
+        role: true,
+        status: true,
         phone: true,
         country: true,
+        lastLogin: true,
         createdAt: true,
       },
     });
