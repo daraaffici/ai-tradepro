@@ -120,6 +120,21 @@ export default function AdminPage() {
                 >
                   Refresh
                 </button>
+
+                <a
+                  href="/api/admin/export/users"
+                  className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl text-white font-bold"
+                >
+                  Export Users
+                </a>
+
+                <a
+                  href="/api/admin/export/trades"
+                  className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-xl text-white font-bold"
+                >
+                  Export Trades
+                </a>
+
               </div>
             </div>
 
