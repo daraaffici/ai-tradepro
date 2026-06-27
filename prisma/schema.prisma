@@ -85,6 +85,8 @@ model ActivityLog {
   adminName   String?
 
   ipAddress   String?
+  isRead Boolean @default(false)
+  level  String  @default("INFO")
 
   createdAt   DateTime @default(now())
 
