@@ -19,11 +19,27 @@ type AdminStats = {
   winRate: number;
   databaseStatus: string;
   serverStatus: string;
+  todayUsers: number;
+  todayTrades: number;
+  todayProfit: number;
+  recentLogs: {
+    id: number;
+    action: string;
+    entity: string;
+    description: string;
+    createdAt: string;
+  }[];
 };
 
 function money(value: number) {
   const sign = value >= 0 ? "" : "-";
   return `${sign}$${Math.abs(value).toFixed(2)}`;
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleString("en-GB", {
+    timeZone: "Asia/Phnom_Penh",
+  });
 }
 
 export default function AdminPage() {
@@ -45,7 +61,10 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (data.success) {
-        setStats(data);
+        setStats({
+          ...data,
+          recentLogs: data.recentLogs || [],
+        });
       } else {
         setStats(null);
       }
@@ -109,20 +128,59 @@ export default function AdminPage() {
             ) : !stats ? (
               <p className="text-red-400">Failed to load admin statistics.</p>
             ) : (
-              <div className="grid md:grid-cols-4 gap-4">
-                <AdminCard title="Total Users" value={stats.totalUsers} subtitle="Registered accounts" />
-                <AdminCard title="Total Trades" value={stats.totalTrades} subtitle="All trades in platform" />
-                <AdminCard title="Open Trades" value={stats.openTrades} subtitle="Currently active trades" />
-                <AdminCard title="Closed Trades" value={stats.closedTrades} subtitle="Win and loss trades" />
-                <AdminCard title="Wins" value={stats.wins} subtitle="Profitable trades" />
-                <AdminCard title="Losses" value={stats.losses} subtitle="Losing trades" />
-                <AdminCard title="Win Rate" value={`${stats.winRate}%`} subtitle="Closed trades only" />
-                <AdminCard title="Total Profit" value={money(stats.totalProfit)} subtitle="Net profit / loss" />
-                <AdminCard title="Database" value={`🟢 ${stats.databaseStatus}`} subtitle="Prisma connection" />
-                <AdminCard title="Server" value={`🟢 ${stats.serverStatus}`} subtitle="API status" />
-                <AdminCard title="Telegram" value="🟢 Connected" subtitle="Bot configured" />
-                <AdminCard title="Version" value="1.0" subtitle="AI TradePro Admin" />
-              </div>
+              <>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <AdminCard title="Total Users" value={stats.totalUsers} subtitle="Registered accounts" />
+                  <AdminCard title="Total Trades" value={stats.totalTrades} subtitle="All trades in platform" />
+                  <AdminCard title="Open Trades" value={stats.openTrades} subtitle="Currently active trades" />
+                  <AdminCard title="Closed Trades" value={stats.closedTrades} subtitle="Win and loss trades" />
+                  <AdminCard title="Wins" value={stats.wins} subtitle="Profitable trades" />
+                  <AdminCard title="Losses" value={stats.losses} subtitle="Losing trades" />
+                  <AdminCard title="Win Rate" value={`${stats.winRate}%`} subtitle="Closed trades only" />
+                  <AdminCard title="Total Profit" value={money(stats.totalProfit)} subtitle="Net profit / loss" />
+                  <AdminCard title="Database" value={`🟢 ${stats.databaseStatus}`} subtitle="Prisma connection" />
+                  <AdminCard title="Server" value={`🟢 ${stats.serverStatus}`} subtitle="API status" />
+                  <AdminCard title="Telegram" value="🟢 Connected" subtitle="Bot configured" />
+                  <AdminCard title="Version" value="1.0" subtitle="AI TradePro Admin" />
+                  <AdminCard title="Today Users" value={stats.todayUsers} subtitle="New users today" />
+                  <AdminCard title="Today Trades" value={stats.todayTrades} subtitle="Trades created today" />
+                  <AdminCard title="Today Profit" value={money(stats.todayProfit)} subtitle="Closed trades today" />
+                </div>
+
+                <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] mt-6">
+                  <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
+
+                  {stats.recentLogs.length === 0 ? (
+                    <p className="text-[var(--muted)]">
+                      No recent activity yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {stats.recentLogs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
+                        >
+                          <div className="flex justify-between gap-4">
+                            <div>
+                              <p className="font-bold">
+                                {log.action} · {log.entity}
+                              </p>
+                              <p className="text-[var(--muted)] text-sm mt-1">
+                                {log.description}
+                              </p>
+                            </div>
+
+                            <span className="text-xs text-[var(--muted)]">
+                              {formatDate(log.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </main>
         </div>
