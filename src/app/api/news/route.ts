@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Parser from "rss-parser";
 
 type Impact = "High" | "Medium" | "Low";
 
@@ -12,20 +13,44 @@ type NewsItem = {
   impact: Impact;
 };
 
+const parser = new Parser();
+
+const feeds = [
+  {
+    source: "CoinDesk",
+    category: "Crypto",
+    url: "https://www.coindesk.com/arc/outboundfeeds/rss/",
+  },
+  {
+    source: "Cointelegraph",
+    category: "Crypto",
+    url: "https://cointelegraph.com/rss",
+  },
+  {
+    source: "FXStreet",
+    category: "Forex",
+    url: "https://www.fxstreet.com/rss/news",
+  },
+  {
+    source: "MarketWatch",
+    category: "Stocks",
+    url: "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+  },
+  {
+    source: "Investing",
+    category: "Market",
+    url: "https://www.investing.com/rss/news.rss",
+  },
+];
+
 function detectImpact(title: string, description: string): Impact {
   const text = `${title} ${description}`.toLowerCase();
 
-  const highKeywords = [
+  const high = [
     "war",
     "conflict",
     "missile",
     "attack",
-    "israel",
-    "iran",
-    "russia",
-    "ukraine",
-    "sanction",
-    "tariff",
     "federal reserve",
     "fed",
     "fomc",
@@ -39,17 +64,18 @@ function detectImpact(title: string, description: string): Impact {
     "non-farm",
     "gdp",
     "recession",
-    "bank crisis",
     "market crash",
-    "selloff",
-    "oil price",
-    "gold price",
+    "bank crisis",
+    "sanction",
+    "tariff",
     "bitcoin etf",
     "sec approval",
     "liquidation",
+    "oil price",
+    "gold price",
   ];
 
-  const mediumKeywords = [
+  const medium = [
     "bitcoin",
     "ethereum",
     "crypto",
@@ -58,8 +84,8 @@ function detectImpact(title: string, description: string): Impact {
     "opec",
     "stocks",
     "nasdaq",
-    "s&p 500",
-    "dow jones",
+    "s&p",
+    "dow",
     "dollar",
     "treasury",
     "forex",
@@ -70,167 +96,59 @@ function detectImpact(title: string, description: string): Impact {
     "microsoft",
   ];
 
-  if (highKeywords.some((word) => text.includes(word))) return "High";
-  if (mediumKeywords.some((word) => text.includes(word))) return "Medium";
+  if (high.some((word) => text.includes(word))) return "High";
+  if (medium.some((word) => text.includes(word))) return "Medium";
 
   return "Low";
 }
 
-function detectCategory(title: string, description: string) {
+function detectCategory(title: string, description: string, fallback: string) {
   const text = `${title} ${description}`.toLowerCase();
 
-  if (
-    text.includes("war") ||
-    text.includes("conflict") ||
-    text.includes("missile") ||
-    text.includes("attack") ||
-    text.includes("israel") ||
-    text.includes("iran") ||
-    text.includes("russia") ||
-    text.includes("ukraine")
-  ) {
-    return "Geopolitical";
-  }
-
-  if (
-    text.includes("federal reserve") ||
-    text.includes("fed") ||
-    text.includes("fomc") ||
-    text.includes("interest rate") ||
-    text.includes("cpi") ||
-    text.includes("ppi") ||
-    text.includes("inflation") ||
-    text.includes("nfp") ||
-    text.includes("gdp")
-  ) {
-    return "Macro";
-  }
-
-  if (
-    text.includes("bitcoin") ||
-    text.includes("ethereum") ||
-    text.includes("crypto") ||
-    text.includes("sec") ||
-    text.includes("etf") ||
-    text.includes("liquidation")
-  ) {
+  if (text.includes("bitcoin") || text.includes("ethereum") || text.includes("crypto")) {
     return "Crypto";
   }
 
   if (text.includes("gold") || text.includes("xauusd")) return "Gold";
+  if (text.includes("forex") || text.includes("dollar") || text.includes("fed")) return "Forex";
+  if (text.includes("stock") || text.includes("nasdaq") || text.includes("s&p")) return "Stocks";
+  if (text.includes("oil") || text.includes("opec")) return "Oil";
 
-  if (
-    text.includes("oil") ||
-    text.includes("opec") ||
-    text.includes("crude")
-  ) {
-    return "Oil";
-  }
-
-  if (
-    text.includes("stock") ||
-    text.includes("nasdaq") ||
-    text.includes("s&p") ||
-    text.includes("dow") ||
-    text.includes("nvidia") ||
-    text.includes("tesla") ||
-    text.includes("apple") ||
-    text.includes("microsoft")
-  ) {
-    return "Stocks";
-  }
-
-  if (text.includes("forex") || text.includes("dollar")) return "Forex";
-
-  return "Market";
+  return fallback;
 }
 
-function isFreshNews(publishedAt: string) {
-  const published = new Date(publishedAt).getTime();
+function isFresh(date: string) {
+  const time = new Date(date).getTime();
+  if (Number.isNaN(time)) return true;
 
-  if (Number.isNaN(published)) return false;
-
-  const hours = (Date.now() - published) / (1000 * 60 * 60);
-
-  return hours >= 0 && hours <= 72;
-}
-
-function impactScore(impact: Impact) {
-  if (impact === "High") return 3;
-  if (impact === "Medium") return 2;
-  return 1;
+  const hours = (Date.now() - time) / (1000 * 60 * 60);
+  return hours <= 168;
 }
 
 export async function GET(req: Request) {
   try {
-    const apiKey = process.env.GNEWS_API_KEY;
     const url = new URL(req.url);
     const category = url.searchParams.get("category") || "All";
 
-    if (!apiKey) {
-      return NextResponse.json([]);
-    }
-
-    const queries =
-      category === "Crypto"
-        ? [
-            "bitcoin crypto ETF SEC ethereum market",
-            "crypto liquidation bitcoin ethereum",
-          ]
-        : category === "Forex"
-        ? [
-            "Federal Reserve dollar forex interest rate",
-            "CPI inflation dollar forex market",
-          ]
-        : category === "Gold"
-        ? [
-            "gold price XAUUSD inflation Federal Reserve",
-            "gold war safe haven market",
-          ]
-        : category === "Stocks"
-        ? [
-            "stock market Nasdaq S&P 500 Dow Jones",
-            "Nvidia Tesla Apple Microsoft earnings stocks",
-          ]
-        : [
-            "Federal Reserve CPI inflation FOMC interest rate",
-            "war conflict missile attack sanctions market",
-            "bitcoin crypto ETF SEC ethereum liquidation",
-            "gold price oil price OPEC market",
-            "stock market Nasdaq S&P 500 Dow Jones",
-            "recession GDP NFP bank crisis market crash",
-          ];
-
     const results = await Promise.allSettled(
-      queries.map(async (query) => {
-        const res = await fetch(
-          `https://gnews.io/api/v4/search?q=${encodeURIComponent(
-            query
-          )}&lang=en&max=10&sortby=publishedAt&apikey=${apiKey}`,
-          { cache: "no-store" }
-        );
+      feeds.map(async (feed) => {
+        const data = await parser.parseURL(feed.url);
 
-        const data = await res.json();
-
-        if (!res.ok || data.errors || !Array.isArray(data.articles)) {
-          return [];
-        }
-
-        return data.articles.map((article: any) => {
-          const title = article.title || "Untitled";
-          const description = article.description || "";
-          const publishedAt = article.publishedAt || new Date().toISOString();
-
-          const impact = detectImpact(title, description);
+        return data.items.map((item) => {
+          const title = item.title || "Untitled";
+          const description =
+            item.contentSnippet || item.content || item.summary || "";
+          const publishedAt =
+            item.isoDate || item.pubDate || new Date().toISOString();
 
           return {
             title,
             description,
-            url: article.url || "#",
-            source: article.source?.name || "Unknown",
+            url: item.link || "#",
+            source: feed.source,
             publishedAt,
-            category: detectCategory(title, description),
-            impact,
+            category: detectCategory(title, description, feed.category),
+            impact: detectImpact(title, description),
           } as NewsItem;
         });
       })
@@ -240,29 +158,25 @@ export async function GET(req: Request) {
       result.status === "fulfilled" ? result.value : []
     ) as NewsItem[];
 
-    const filteredNews = allNews
+    const filtered = allNews
       .filter((item) => item.url !== "#")
-      .filter((item) => isFreshNews(item.publishedAt))
-      .filter((item) => item.impact === "High" || item.impact === "Medium")
+      .filter((item) => isFresh(item.publishedAt))
+      .filter((item) => item.impact !== "Low")
+      .filter((item) => category === "All" || item.category === category)
       .filter(
         (item, index, self) =>
           index === self.findIndex((n) => n.url === item.url)
       )
-      .sort((a, b) => {
-        const byImpact = impactScore(b.impact) - impactScore(a.impact);
-
-        if (byImpact !== 0) return byImpact;
-
-        return (
+      .sort(
+        (a, b) =>
           new Date(b.publishedAt).getTime() -
           new Date(a.publishedAt).getTime()
-        );
-      })
-      .slice(0, 20);
+      )
+      .slice(0, 30);
 
-    return NextResponse.json(filteredNews);
+    return NextResponse.json(filtered);
   } catch (error) {
-    console.error("News API failed:", error);
+    console.error("RSS News API failed:", error);
     return NextResponse.json([]);
   }
 }
