@@ -13,7 +13,7 @@
       "schedule": "0 15 1 * *"
     },
     {
-      "path": "/api/news/sync?secret=ai-tradepro-super-secret-2026",
+      "path": "/api/news/sync?secret=aiTradePro2026SuperSecretNewsSync",
       "schedule": "*/5 * * * *"
     }
   ]
