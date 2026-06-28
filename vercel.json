@@ -1,20 +1,20 @@
 {
   "crons": [
     {
-      "path": "/api/reports/daily",
+      "path": "/api/reports/daily?secret=ai-tradepro-super-secret-2026",
       "schedule": "0 15 * * *"
     },
     {
-      "path": "/api/reports/weekly",
+      "path": "/api/reports/weekly?secret=ai-tradepro-super-secret-2026",
       "schedule": "0 15 * * 0"
     },
     {
-      "path": "/api/reports/monthly",
+      "path": "/api/reports/monthly?secret=ai-tradepro-super-secret-2026",
       "schedule": "0 15 1 * *"
     },
     {
-      "path": "/api/reports/daily?secret=ai-tradepro-super-secret-2026",
-      "schedule": "0 15 * * *"
+      "path": "/api/news/sync?secret=ai-tradepro-super-secret-2026",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
