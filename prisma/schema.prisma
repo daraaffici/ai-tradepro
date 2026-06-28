@@ -92,3 +92,16 @@ model ActivityLog {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
+
+model MarketNews {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  url         String   @unique
+  source      String
+  category    String
+  impact      String
+  publishedAt DateTime
+  sentTelegram Boolean @default(false)
+  createdAt   DateTime @default(now())
+}
