@@ -1,21 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import AuthGuard from "@/components/AuthGuard";
 
+type NewsImpact = "Critical" | "High" | "Medium";
+
 type NewsItem = {
+  id?: number;
   title: string;
-  description: string;
+  description: string | null;
   url: string;
   source: string;
   publishedAt: string;
   category: string;
-  impact: "High" | "Medium" | "Low";
+  impact: NewsImpact;
 };
 
-const categories = ["All", "Crypto", "Forex", "Gold", "Stocks"];
+const categories = ["All", "Crypto", "Forex", "Gold", "Stocks", "Oil", "Macro", "Geopolitical"];
 
 function formatDate(date: string) {
   return new Date(date).toLocaleString("en-GB", {
@@ -29,14 +32,21 @@ function formatDate(date: string) {
 }
 
 function impactClass(impact: string) {
-  if (impact === "High") return "text-red-400 font-bold";
-  if (impact === "Medium") return "text-yellow-400 font-bold";
-  return "text-green-400 font-bold";
+  if (impact === "Critical") return "text-red-500 font-bold";
+  if (impact === "High") return "text-orange-400 font-bold";
+  return "text-yellow-400 font-bold";
+}
+
+function impactLabel(impact: string) {
+  if (impact === "Critical") return "🔴 Critical";
+  if (impact === "High") return "🟠 High";
+  return "🟡 Medium";
 }
 
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [category, setCategory] = useState("All");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,15 +64,19 @@ export default function NewsPage() {
         cache: "no-store",
       });
 
-      const data: NewsItem[] = await res.json();
+      const data = await res.json();
 
-      setNews(
-        [...data].sort(
-          (a, b) =>
-            new Date(b.publishedAt).getTime() -
-            new Date(a.publishedAt).getTime()
-        )
-      );
+      if (Array.isArray(data)) {
+        setNews(
+          data.sort(
+            (a: NewsItem, b: NewsItem) =>
+              new Date(b.publishedAt).getTime() -
+              new Date(a.publishedAt).getTime()
+          )
+        );
+      } else {
+        setNews([]);
+      }
     } catch (error) {
       console.error("Failed to load news:", error);
       setNews([]);
@@ -70,6 +84,21 @@ export default function NewsPage() {
       setLoading(false);
     }
   }
+
+  const filteredNews = useMemo(() => {
+    const keyword = search.toLowerCase().trim();
+
+    if (!keyword) return news;
+
+    return news.filter((item) => {
+      const text = `${item.title} ${item.description || ""} ${item.source} ${
+        item.category
+      } ${item.impact}`.toLowerCase();
+
+      return text.includes(keyword);
+    });
+  }, [news, search]);
+
   return (
     <AuthGuard>
       <div
@@ -88,11 +117,18 @@ export default function NewsPage() {
             <div>
               <h1 className="text-3xl font-bold">News & Impact</h1>
               <p className="text-[var(--muted)] mt-2">
-                Latest high-impact market news for traders.
+                Critical, high, and medium impact market news for traders.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search news..."
+                className="bg-zinc-800 text-white px-4 py-2 rounded-xl border border-zinc-700"
+              />
+
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -117,13 +153,15 @@ export default function NewsPage() {
 
           {loading ? (
             <p className="text-[var(--muted)]">Loading latest news...</p>
-          ) : news.length === 0 ? (
-            <p className="text-yellow-400">No high-impact news found.</p>
+          ) : filteredNews.length === 0 ? (
+            <p className="text-yellow-400">
+              No Critical, High, or Medium impact news found.
+            </p>
           ) : (
             <div className="space-y-4">
-              {news.map((item, index) => (
+              {filteredNews.map((item, index) => (
                 <div
-                  key={`${item.url}-${index}`}
+                  key={item.id || `${item.url}-${index}`}
                   className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]"
                 >
                   <div className="flex justify-between gap-4">
@@ -131,7 +169,7 @@ export default function NewsPage() {
                       <h2 className="font-bold text-lg">{item.title}</h2>
 
                       <p className="text-[var(--muted)] mt-2">
-                        {item.description}
+                        {item.description || "No description available."}
                       </p>
 
                       <p className="text-[var(--muted)] text-sm mt-3">
@@ -144,7 +182,7 @@ export default function NewsPage() {
                     </div>
 
                     <span className={impactClass(item.impact)}>
-                      {item.impact}
+                      {impactLabel(item.impact)}
                     </span>
                   </div>
 

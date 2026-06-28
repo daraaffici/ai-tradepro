@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import Parser from "rss-parser";
 import { prisma } from "@/lib/prisma";
 import { createActivityLog } from "@/lib/activityLog";
-
-type Impact = "High" | "Medium" | "Low";
+import {
+  detectNewsPriority,
+  detectNewsCategory,
+  type NewsPriority,
+} from "@/lib/newsPriority";
 
 type NewsItem = {
   title: string;
@@ -11,103 +14,18 @@ type NewsItem = {
   url: string;
   source: string;
   category: string;
-  impact: Impact;
+  impact: NewsPriority;
   publishedAt: Date;
 };
 
 const parser = new Parser();
 
 const feeds = [
-  {
-    source: "CoinDesk",
-    category: "Crypto",
-    url: "https://www.coindesk.com/arc/outboundfeeds/rss/",
-  },
-  {
-    source: "Cointelegraph",
-    category: "Crypto",
-    url: "https://cointelegraph.com/rss",
-  },
-  {
-    source: "FXStreet",
-    category: "Forex",
-    url: "https://www.fxstreet.com/rss/news",
-  },
-  {
-    source: "MarketWatch",
-    category: "Stocks",
-    url: "https://feeds.content.dowjones.io/public/rss/mw_topstories",
-  },
+  { source: "CoinDesk", category: "Crypto", url: "https://www.coindesk.com/arc/outboundfeeds/rss/" },
+  { source: "Cointelegraph", category: "Crypto", url: "https://cointelegraph.com/rss" },
+  { source: "FXStreet", category: "Forex", url: "https://www.fxstreet.com/rss/news" },
+  { source: "MarketWatch", category: "Stocks", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories" },
 ];
-
-function detectImpact(title: string, description: string): Impact {
-  const text = `${title} ${description}`.toLowerCase();
-
-  const highWords = [
-    "war",
-    "attack",
-    "missile",
-    "conflict",
-    "federal reserve",
-    "fomc",
-    "interest rate",
-    "rate cut",
-    "rate hike",
-    "inflation",
-    "cpi",
-    "ppi",
-    "nfp",
-    "non-farm",
-    "gdp",
-    "recession",
-    "market crash",
-    "bank crisis",
-    "sec approval",
-    "bitcoin etf",
-    "liquidation",
-    "sanction",
-    "tariff",
-  ];
-
-  const mediumWords = [
-    "bitcoin",
-    "ethereum",
-    "crypto",
-    "gold",
-    "oil",
-    "opec",
-    "stocks",
-    "nasdaq",
-    "s&p",
-    "dow",
-    "dollar",
-    "forex",
-    "earnings",
-    "nvidia",
-    "tesla",
-    "apple",
-  ];
-
-  if (highWords.some((w) => text.includes(w))) return "High";
-  if (mediumWords.some((w) => text.includes(w))) return "Medium";
-
-  return "Low";
-}
-
-function detectCategory(title: string, description: string, fallback: string) {
-  const text = `${title} ${description}`.toLowerCase();
-
-  if (text.includes("bitcoin") || text.includes("ethereum") || text.includes("crypto")) {
-    return "Crypto";
-  }
-
-  if (text.includes("gold") || text.includes("xauusd")) return "Gold";
-  if (text.includes("forex") || text.includes("dollar") || text.includes("fed")) return "Forex";
-  if (text.includes("stock") || text.includes("nasdaq") || text.includes("s&p")) return "Stocks";
-  if (text.includes("oil") || text.includes("opec")) return "Oil";
-
-  return fallback;
-}
 
 async function sendTelegramMessage(news: NewsItem) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -126,10 +44,17 @@ async function sendTelegramMessage(news: NewsItem) {
     minute: "2-digit",
   });
 
+  const icon =
+    news.impact === "Critical"
+      ? "🔴"
+      : news.impact === "High"
+      ? "🟠"
+      : "🟡";
+
   const message = `
 🚨 <b>AI TradePro News Alert</b>
 
-<b>${news.impact} Impact News</b>
+${icon} <b>${news.impact.toUpperCase()} NEWS</b>
 
 📰 <b>${news.title}</b>
 
@@ -144,9 +69,7 @@ AI TradePro
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
       text: message,
@@ -169,19 +92,16 @@ async function fetchRSSNews() {
 
       return data.items.map((item) => {
         const title = item.title || "Untitled";
-        const description =
-          item.contentSnippet || item.content || item.summary || "";
-
+        const description = item.contentSnippet || item.content || item.summary || "";
         const publishedAt = item.isoDate || item.pubDate || new Date().toISOString();
-
-        const impact = detectImpact(title, description);
+        const impact = detectNewsPriority(title, description);
 
         return {
           title,
           description,
           url: item.link || "#",
           source: feed.source,
-          category: detectCategory(title, description, feed.category),
+          category: detectNewsCategory(title, description, feed.category),
           impact,
           publishedAt: new Date(publishedAt),
         } as NewsItem;
@@ -200,21 +120,16 @@ export async function GET(req: Request) {
     const secret = url.searchParams.get("secret");
 
     if (secret !== process.env.CRON_SECRET) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const rssNews = await fetchRSSNews();
 
     const importantNews = rssNews
       .filter((item) => item.url !== "#")
-      .filter((item) => item.impact === "High" || item.impact === "Medium")
+      .filter((item) => item.impact !== "Low")
       .filter((item) => {
-        const hours =
-          (Date.now() - item.publishedAt.getTime()) / (1000 * 60 * 60);
-
+        const hours = (Date.now() - item.publishedAt.getTime()) / (1000 * 60 * 60);
         return hours >= 0 && hours <= 168;
       });
 
@@ -224,9 +139,7 @@ export async function GET(req: Request) {
 
     for (const item of importantNews) {
       const exists = await prisma.marketNews.findUnique({
-        where: {
-          url: item.url,
-        },
+        where: { url: item.url },
       });
 
       if (exists) {
@@ -262,7 +175,7 @@ export async function GET(req: Request) {
           action: "NEWS_ALERT_SENT",
           entity: "News",
           entityId: saved.id,
-          description: `${item.impact} impact news sent to Telegram: ${item.title}`,
+          description: `${item.impact} news sent to Telegram: ${item.title}`,
           adminName: "System",
         });
       } catch (error) {
@@ -279,10 +192,7 @@ export async function GET(req: Request) {
     });
   } catch (error: any) {
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "News sync failed",
-      },
+      { success: false, error: error.message || "News sync failed" },
       { status: 500 }
     );
   }
