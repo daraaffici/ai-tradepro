@@ -40,7 +40,11 @@ export default function TradeHistoryPage() {
               </select>
 
               <a
-                href={`/api/trades/export?period=${period}`}
+                href={`/api/trades/export?period=${period}&userId=${
+                  typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user") || "{}")?.id || ""
+                    : ""
+                }`}
                 className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl text-white font-bold"
               >
                 Download CSV

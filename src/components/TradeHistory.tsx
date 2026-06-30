@@ -17,6 +17,17 @@ type Props = {
   period?: string;
 };
 
+function getUserId() {
+  try {
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) return null;
+    const user = JSON.parse(savedUser);
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function TradeHistory({ period = "all" }: Props) {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,9 +40,17 @@ export default function TradeHistory({ period = "all" }: Props) {
     try {
       setLoading(true);
 
-      const res = await fetch(`/api/trades/history?period=${period}`, {
-        cache: "no-store",
-      });
+      const userId = getUserId();
+
+      if (!userId) {
+        setTrades([]);
+        return;
+      }
+
+      const res = await fetch(
+        `/api/trades/history?period=${period}&userId=${userId}`,
+        { cache: "no-store" }
+      );
 
       const data = await res.json();
       setTrades(Array.isArray(data) ? data : []);
@@ -82,42 +101,17 @@ export default function TradeHistory({ period = "all" }: Props) {
                 <tr key={trade.id} className="border-b border-[var(--border)]">
                   <td className="p-3">{formatDate(trade.createdAt)}</td>
                   <td className="p-3 font-bold">{trade.symbol}</td>
-
-                  <td
-                    className={
-                      trade.type === "BUY"
-                        ? "p-3 text-green-400"
-                        : "p-3 text-red-400"
-                    }
-                  >
+                  <td className={trade.type === "BUY" ? "p-3 text-green-400" : "p-3 text-red-400"}>
                     {trade.type}
                   </td>
-
                   <td className="p-3">${Number(trade.entry).toLocaleString()}</td>
-
                   <td className="p-3">
-                    {trade.closePrice
-                      ? `$${Number(trade.closePrice).toLocaleString()}`
-                      : "-"}
+                    {trade.closePrice ? `$${Number(trade.closePrice).toLocaleString()}` : "-"}
                   </td>
-
-                  <td
-                    className={
-                      Number(trade.profit || 0) >= 0
-                        ? "p-3 text-green-400 font-bold"
-                        : "p-3 text-red-400 font-bold"
-                    }
-                  >
+                  <td className={Number(trade.profit || 0) >= 0 ? "p-3 text-green-400 font-bold" : "p-3 text-red-400 font-bold"}>
                     ${Number(trade.profit || 0).toFixed(2)}
                   </td>
-
-                  <td
-                    className={
-                      trade.status === "Win"
-                        ? "p-3 text-green-400 font-bold"
-                        : "p-3 text-red-400 font-bold"
-                    }
-                  >
+                  <td className={trade.status === "Win" ? "p-3 text-green-400 font-bold" : "p-3 text-red-400 font-bold"}>
                     {trade.status}
                   </td>
                 </tr>

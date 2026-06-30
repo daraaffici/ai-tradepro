@@ -7,8 +7,18 @@ import {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const period = url.searchParams.get("period") || "all";
+  const userId = Number(url.searchParams.get("userId"));
 
-  const where: any = {};
+  if (!userId) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const where: any = {
+    userId,
+    status: {
+      not: "Open",
+    },
+  };
 
   const dateFilter = getCambodiaPeriodFilter(period);
 

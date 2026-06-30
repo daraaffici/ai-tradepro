@@ -6,8 +6,14 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const period = url.searchParams.get("period") || "all";
+    const userId = Number(url.searchParams.get("userId"));
+
+    if (!userId) {
+      return NextResponse.json([]);
+    }
 
     const where: any = {
+      userId,
       NOT: {
         status: "Open",
       },
