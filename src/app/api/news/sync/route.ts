@@ -103,20 +103,15 @@ async function fetchFeedNews(feed: {
   category: string;
   url: string;
 }) {
-  const syncState = await prisma.newsSyncState.findUnique({
-    where: {
-      source: feed.source,
-    },
-  });
-
   const data = await parser.parseURL(feed.url);
 
-  const items = data.items
+  return data.items
     .map((item) => {
       const title = item.title || "Untitled";
       const description =
         item.contentSnippet || item.content || item.summary || "";
-      const publishedAt = item.isoDate || item.pubDate || new Date().toISOString();
+      const publishedAt =
+        item.isoDate || item.pubDate || new Date().toISOString();
 
       return {
         title,
@@ -128,31 +123,7 @@ async function fetchFeedNews(feed: {
         publishedAt: new Date(publishedAt),
       } as NewsItem;
     })
-    .filter((item) => item.url !== "#")
-    .filter((item) => {
-      if (!syncState) return true;
-
-      return item.publishedAt > syncState.lastSyncAt;
-    });
-
-  const newestItem = data.items[0];
-
-  await prisma.newsSyncState.upsert({
-    where: {
-      source: feed.source,
-    },
-    update: {
-      lastSyncAt: new Date(),
-      lastNewsUrl: newestItem?.link || syncState?.lastNewsUrl || null,
-    },
-    create: {
-      source: feed.source,
-      lastSyncAt: new Date(),
-      lastNewsUrl: newestItem?.link || null,
-    },
-  });
-
-  return items;
+    .filter((item) => item.url !== "#");
 }
 
 async function fetchRSSNews() {
