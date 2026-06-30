@@ -15,6 +15,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+type User = {
+  id: number;
+};
+
 type Stats = {
   winRate: number;
   totalProfit: number;
@@ -37,7 +41,16 @@ export default function AnalyticsDashboard() {
   }, []);
 
   async function loadStats() {
-    const res = await fetch("/api/trades/stats", {
+    const savedUser = localStorage.getItem("user");
+
+    if (!savedUser) {
+      setStats(null);
+      return;
+    }
+
+    const user: User = JSON.parse(savedUser);
+
+    const res = await fetch(`/api/trades/stats?userId=${user.id}`, {
       cache: "no-store",
     });
 

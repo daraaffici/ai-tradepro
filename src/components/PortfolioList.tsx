@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+type User = {
+  id: number;
+};
+
 type Portfolio = {
   id: number;
   symbol: string;
@@ -23,13 +27,33 @@ export default function PortfolioList() {
     return () => clearInterval(interval);
   }, []);
 
+  function getUser(): User | null {
+    const savedUser = localStorage.getItem("user");
+
+    if (!savedUser) return null;
+
+    try {
+      return JSON.parse(savedUser);
+    } catch {
+      return null;
+    }
+  }
+
   async function loadData() {
-    const portfolioRes = await fetch("/api/portfolio", {
+    const user = getUser();
+
+    if (!user?.id) {
+      setItems([]);
+      setPrices({});
+      return;
+    }
+
+    const portfolioRes = await fetch(`/api/portfolio?userId=${user.id}`, {
       cache: "no-store",
     });
 
     const portfolioData: Portfolio[] = await portfolioRes.json();
-    setItems(portfolioData);
+    setItems(Array.isArray(portfolioData) ? portfolioData : []);
 
     const uniqueSymbols = Array.from(
       new Set(portfolioData.map((item) => item.symbol))
@@ -50,12 +74,19 @@ export default function PortfolioList() {
   }
 
   async function deletePortfolio(id: number) {
+    const user = getUser();
+
+    if (!user?.id) {
+      alert("Please login again");
+      return;
+    }
+
     await fetch("/api/portfolio/delete", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, userId: user.id }),
     });
 
     setItems((prev) => prev.filter((x) => x.id !== id));
@@ -65,79 +96,88 @@ export default function PortfolioList() {
     <div className="bg-[var(--card)] mt-8 rounded-2xl p-5 border border-[var(--border)]">
       <h2 className="text-xl font-bold mb-4">My Portfolio</h2>
 
-      <div className="space-y-4">
-        {items.map((item) => {
-          const apiPrice = prices[item.symbol];
-          const currentPrice =
-            apiPrice && apiPrice > 0 ? apiPrice : item.buyPrice;
+      {items.length === 0 ? (
+        <p className="text-[var(--muted)]">No portfolio items yet.</p>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item) => {
+            const apiPrice = prices[item.symbol];
+            const currentPrice =
+              apiPrice && apiPrice > 0 ? apiPrice : item.buyPrice;
 
-          const profit = (currentPrice - item.buyPrice) * item.quantity;
+            const profit = (currentPrice - item.buyPrice) * item.quantity;
 
-          const profitPercent =
-            item.buyPrice > 0
-              ? ((currentPrice - item.buyPrice) / item.buyPrice) * 100
-              : 0;
+            const profitPercent =
+              item.buyPrice > 0
+                ? ((currentPrice - item.buyPrice) / item.buyPrice) * 100
+                : 0;
 
-          return (
-            <div
-              key={item.id}
-              className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-lg">{item.symbol}</p>
-                  <p className="text-[var(--muted)] text-sm">
-                    Qty: {item.quantity}
-                  </p>
-                </div>
+            return (
+              <div
+                key={item.id}
+                className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-lg">{item.symbol}</p>
+                    <p className="text-[var(--muted)] text-sm">
+                      Qty: {item.quantity}
+                    </p>
+                  </div>
 
-                <button
-                  onClick={() => deletePortfolio(item.id)}
-                  className="text-red-400 hover:text-red-300"
-                >
-                  ❌
-                </button>
-              </div>
-
-              <div className="grid md:grid-cols-4 gap-4 mt-4">
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Buy Price</p>
-                  <p>${item.buyPrice.toLocaleString()}</p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Current Price</p>
-                  <p>
-                    {apiPrice && apiPrice > 0
-                      ? `$${currentPrice.toLocaleString()}`
-                      : "Unavailable"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Position Value</p>
-                  <p>
-                    ${(currentPrice * item.quantity).toLocaleString(undefined, {
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">P&L</p>
-                  <p
-                    className={
-                      profit >= 0 ? "text-green-400" : "text-red-400"
-                    }
+                  <button
+                    onClick={() => deletePortfolio(item.id)}
+                    className="text-red-400 hover:text-red-300"
                   >
-                    ${profit.toFixed(2)} ({profitPercent.toFixed(2)}%)
-                  </p>
+                    ❌
+                  </button>
+                </div>
+
+                <div className="grid md:grid-cols-4 gap-4 mt-4">
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">Buy Price</p>
+                    <p>${item.buyPrice.toLocaleString()}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">
+                      Current Price
+                    </p>
+                    <p>
+                      {apiPrice && apiPrice > 0
+                        ? `$${currentPrice.toLocaleString()}`
+                        : "Unavailable"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">
+                      Position Value
+                    </p>
+                    <p>
+                      $
+                      {(currentPrice * item.quantity).toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">P&L</p>
+                    <p
+                      className={
+                        profit >= 0 ? "text-green-400" : "text-red-400"
+                      }
+                    >
+                      ${profit.toFixed(2)} ({profitPercent.toFixed(2)}%)
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

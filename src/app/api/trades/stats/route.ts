@@ -6,9 +6,33 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const period = url.searchParams.get("period") || "all";
+    const userId = Number(url.searchParams.get("userId"));
+
+    if (!userId) {
+      return NextResponse.json({
+        success: true,
+        period,
+        totalTrades: 0,
+        openTrades: 0,
+        closedTrades: 0,
+        buyTrades: 0,
+        sellTrades: 0,
+        winTrades: 0,
+        lossTrades: 0,
+        totalProfit: 0,
+        totalLoss: 0,
+        netProfit: 0,
+        winRate: 0,
+        bestTrade: null,
+        worstTrade: null,
+      });
+    }
 
     const dateFilter = getCambodiaPeriodFilter(period);
-    const where: any = {};
+
+    const where: any = {
+      userId,
+    };
 
     if (dateFilter) {
       where.createdAt = dateFilter;

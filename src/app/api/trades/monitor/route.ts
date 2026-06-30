@@ -39,10 +39,16 @@ function formatMoney(value: number) {
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
+
     const baseUrl = `${url.protocol}//${url.host}`;
 
+    const userId = Number(url.searchParams.get("userId"));
+
     const openTrades = await prisma.trade.findMany({
-      where: { status: "Open" },
+      where: {
+        userId,
+        status: "Open",
+      },
     });
 
     let updated = 0;

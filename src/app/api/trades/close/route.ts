@@ -41,10 +41,13 @@ export async function POST(req: Request) {
     const url = new URL(req.url);
     const baseUrl = `${url.protocol}//${url.host}`;
 
-    const { id } = await req.json();
+    const { id, userId } = await req.json();
 
-    const trade = await prisma.trade.findUnique({
-      where: { id: Number(id) },
+    const trade = await prisma.trade.findFirst({
+      where:{
+        id:Number(id),
+        userId:Number(userId),
+      },
     });
 
     if (!trade) {
@@ -73,7 +76,7 @@ export async function POST(req: Request) {
     const status = profit >= 0 ? "Win" : "Loss";
 
     const updatedTrade = await prisma.trade.update({
-      where: { id: Number(id) },
+      where: { id: trade.id },
       data: {
         status,
         closePrice: currentPrice,

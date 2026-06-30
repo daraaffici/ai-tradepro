@@ -15,6 +15,10 @@ type Trade = {
   status: string;
 };
 
+type User = {
+  id: number;
+};
+
 const marketSymbols = [
   "BTCUSDT",
   "ETHUSDT",
@@ -48,10 +52,6 @@ export default function TradeJournal() {
 
   useEffect(() => {
     loadTrades();
-  }, []);
-
-  useEffect(() => {
-    loadPrice(symbol);
 
     const interval = setInterval(() => {
       monitorTrades();
@@ -62,11 +62,32 @@ export default function TradeJournal() {
     return () => clearInterval(interval);
   }, [symbol]);
 
-  async function loadTrades() {
-    const res = await fetch("/api/trades", { cache: "no-store" });
-    const data: Trade[] = await res.json();
+  function getUser(): User | null {
+    const savedUser = localStorage.getItem("user");
 
-    setTrades(data);
+    if (!savedUser) return null;
+
+    try {
+      return JSON.parse(savedUser);
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadTrades() {
+    const user = getUser();
+
+    if (!user?.id) {
+      setTrades([]);
+      return;
+    }
+
+    const res = await fetch(`/api/trades?userId=${user.id}`, {
+      cache: "no-store",
+    });
+
+    const data: Trade[] = await res.json();
+    setTrades(Array.isArray(data) ? data : []);
 
     for (const trade of data) {
       loadPrice(trade.symbol);
@@ -114,12 +135,17 @@ export default function TradeJournal() {
   }
 
   async function addTrade() {
+    const user = getUser();
+
+    if (!user?.id) {
+      alert("Please login again");
+      return;
+    }
+
     if (!entry || !takeProfit || !stopLoss || !lotSize) {
       alert("Please fill Entry, Take Profit, Stop Loss, and Lot Size");
       return;
     }
-
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     const res = await fetch("/api/trades/add", {
       method: "POST",
@@ -152,24 +178,44 @@ export default function TradeJournal() {
   }
 
   async function deleteTrade(id: number) {
+    const user = getUser();
+
+    if (!user?.id) {
+      alert("Please login again");
+      return;
+    }
+
     await fetch("/api/trades/delete", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({
+        id,
+        userId: user.id,
+      }),
     });
 
     setTrades((prev) => prev.filter((x) => x.id !== id));
   }
 
   async function closePosition(id: number) {
+    const user = getUser();
+
+    if (!user?.id) {
+      alert("Please login again");
+      return;
+    }
+
     const res = await fetch("/api/trades/close", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({
+        id,
+        userId: user.id,
+      }),
     });
 
     const data = await res.json();
@@ -189,7 +235,11 @@ export default function TradeJournal() {
 
   async function monitorTrades() {
     try {
-      const res = await fetch("/api/trades/monitor", {
+      const user = getUser();
+
+      if (!user?.id) return;
+
+      const res = await fetch(`/api/trades/monitor?userId=${user.id}`, {
         cache: "no-store",
       });
 
@@ -198,7 +248,9 @@ export default function TradeJournal() {
       if (data.success && data.closedTrades?.length > 0) {
         data.closedTrades.forEach((trade: any) => {
           alert(
-            `${trade.status === "Win" ? "🎉 TP Hit" : "❌ SL Hit"}\n${trade.symbol}\nProfit: $${Number(trade.profit).toFixed(2)}`
+            `${trade.status === "Win" ? "🎉 TP Hit" : "❌ SL Hit"}\n${
+              trade.symbol
+            }\nProfit: $${Number(trade.profit).toFixed(2)}`
           );
         });
       }
@@ -361,135 +413,141 @@ export default function TradeJournal() {
       </div>
 
       <div className="space-y-3">
-        {filteredTrades.map((trade) => {
-          const tradeCurrentPrice = prices[trade.symbol] || 0;
+        {filteredTrades.length === 0 ? (
+          <p className="text-[var(--muted)]">No trades found.</p>
+        ) : (
+          filteredTrades.map((trade) => {
+            const tradeCurrentPrice = prices[trade.symbol] || 0;
 
-          const liveProfit = calcProfit(
-            trade.type,
-            trade.entry,
-            tradeCurrentPrice,
-            trade.lotSize
-          );
+            const liveProfit = calcProfit(
+              trade.type,
+              trade.entry,
+              tradeCurrentPrice,
+              trade.lotSize
+            );
 
-          const displayProfit =
-            trade.status === "Open" ? liveProfit : trade.profit;
+            const displayProfit =
+              trade.status === "Open" ? liveProfit : trade.profit;
 
-          return (
-            <div
-              key={trade.id}
-              className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-bold">{trade.symbol}</p>
+            return (
+              <div
+                key={trade.id}
+                className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-bold">{trade.symbol}</p>
 
-                  <p
-                    className={
-                      trade.type === "BUY"
-                        ? "text-green-400 text-sm"
-                        : "text-red-400 text-sm"
-                    }
-                  >
-                    {trade.type}
-                  </p>
+                    <p
+                      className={
+                        trade.type === "BUY"
+                          ? "text-green-400 text-sm"
+                          : "text-red-400 text-sm"
+                      }
+                    >
+                      {trade.type}
+                    </p>
 
-                  <p className="text-[var(--muted)] text-sm">
-                    Lot: {trade.lotSize}
-                  </p>
+                    <p className="text-[var(--muted)] text-sm">
+                      Lot: {trade.lotSize}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={
+                        trade.status === "Win"
+                          ? "text-green-400"
+                          : trade.status === "Loss"
+                          ? "text-red-400"
+                          : "text-yellow-400"
+                      }
+                    >
+                      {trade.status}
+                    </span>
+
+                    <button
+                      onClick={() => deleteTrade(trade.id)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      ❌
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <span
-                    className={
-                      trade.status === "Win"
-                        ? "text-green-400"
-                        : trade.status === "Loss"
-                        ? "text-red-400"
-                        : "text-yellow-400"
-                    }
-                  >
-                    {trade.status}
-                  </span>
+                <div className="grid md:grid-cols-6 gap-4 mt-4">
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">Entry</p>
+                    <p>${trade.entry.toLocaleString()}</p>
+                  </div>
 
-                  <button
-                    onClick={() => deleteTrade(trade.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    ❌
-                  </button>
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">
+                      Current Price
+                    </p>
+                    <p>
+                      {tradeCurrentPrice
+                        ? `$${tradeCurrentPrice.toLocaleString()}`
+                        : "..."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">Take Profit</p>
+                    <p className="text-green-400">
+                      ${trade.takeProfit.toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">Stop Loss</p>
+                    <p className="text-red-400">
+                      ${trade.stopLoss.toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">Close Price</p>
+                    <p>
+                      {trade.closePrice
+                        ? `$${trade.closePrice.toLocaleString()}`
+                        : "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[var(--muted)] text-sm">
+                      {trade.status === "Open" ? "Live P/L" : "Profit"}
+                    </p>
+
+                    <p
+                      className={
+                        (displayProfit || 0) >= 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }
+                    >
+                      {displayProfit !== null && displayProfit !== undefined
+                        ? `$${displayProfit.toFixed(2)}`
+                        : "-"}
+                    </p>
+                  </div>
                 </div>
+
+                {trade.status === "Open" && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => closePosition(trade.id)}
+                      className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm text-white"
+                    >
+                      🔒 Close Position
+                    </button>
+                  </div>
+                )}
               </div>
-
-              <div className="grid md:grid-cols-6 gap-4 mt-4">
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Entry</p>
-                  <p>${trade.entry.toLocaleString()}</p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Current Price</p>
-                  <p>
-                    {tradeCurrentPrice
-                      ? `$${tradeCurrentPrice.toLocaleString()}`
-                      : "..."}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Take Profit</p>
-                  <p className="text-green-400">
-                    ${trade.takeProfit.toLocaleString()}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Stop Loss</p>
-                  <p className="text-red-400">
-                    ${trade.stopLoss.toLocaleString()}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">Close Price</p>
-                  <p>
-                    {trade.closePrice
-                      ? `$${trade.closePrice.toLocaleString()}`
-                      : "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[var(--muted)] text-sm">
-                    {trade.status === "Open" ? "Live P/L" : "Profit"}
-                  </p>
-
-                  <p
-                    className={
-                      (displayProfit || 0) >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }
-                  >
-                    {displayProfit !== null && displayProfit !== undefined
-                      ? `$${displayProfit.toFixed(2)}`
-                      : "-"}
-                  </p>
-                </div>
-              </div>
-
-              {trade.status === "Open" && (
-                <div className="mt-4">
-                  <button
-                    onClick={() => closePosition(trade.id)}
-                    className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm text-white"
-                  >
-                    🔒 Close Position
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

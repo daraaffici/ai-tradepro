@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+type User = {
+  id: number;
+};
+
 export default function DashboardSummary() {
   const [portfolioCount, setPortfolioCount] = useState(0);
   const [watchlistCount, setWatchlistCount] = useState(0);
@@ -9,13 +13,32 @@ export default function DashboardSummary() {
 
   useEffect(() => {
     async function load() {
-      const portfolio = await fetch("/api/portfolio").then((r) => r.json());
-      const watchlist = await fetch("/api/watchlist").then((r) => r.json());
-      const trades = await fetch("/api/trades/stats").then((r) => r.json());
+      const savedUser = localStorage.getItem("user");
 
-      setPortfolioCount(portfolio.length);
-      setWatchlistCount(watchlist.length);
-      setTradeCount(trades.openTrades);
+      if (!savedUser) {
+        setPortfolioCount(0);
+        setWatchlistCount(0);
+        setTradeCount(0);
+        return;
+      }
+
+      const user: User = JSON.parse(savedUser);
+
+      const portfolio = await fetch(`/api/portfolio?userId=${user.id}`).then(
+        (r) => r.json()
+      );
+
+      const watchlist = await fetch(`/api/watchlist?userId=${user.id}`).then(
+        (r) => r.json()
+      );
+
+      const trades = await fetch(`/api/trades/stats?userId=${user.id}`).then(
+        (r) => r.json()
+      );
+
+      setPortfolioCount(Array.isArray(portfolio) ? portfolio.length : 0);
+      setWatchlistCount(Array.isArray(watchlist) ? watchlist.length : 0);
+      setTradeCount(trades.openTrades || 0);
     }
 
     load();

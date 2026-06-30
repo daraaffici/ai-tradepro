@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
-  const items = await prisma.portfolio.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const userId = Number(url.searchParams.get("userId"));
 
-  return NextResponse.json(items);
+    if (!userId) {
+      return NextResponse.json([]);
+    }
+
+    const items = await prisma.portfolio.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(items);
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to load portfolio" },
+      { status: 500 }
+    );
+  }
 }

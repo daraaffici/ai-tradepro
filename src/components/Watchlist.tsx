@@ -136,12 +136,22 @@ export default function Watchlist() {
   }
 
   async function deleteWatchlist(id: number) {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    if (!user.id) {
+      alert("Please login again");
+      return;
+    }
+
     await fetch("/api/watchlist/delete", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({
+        id,
+        userId: user.id,
+      }),
     });
 
     await loadData();

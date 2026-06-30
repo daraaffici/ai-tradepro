@@ -2,15 +2,60 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  await prisma.watchlist.delete({
-    where: {
-      id: body.id,
-    },
-  });
+    const userId = Number(body.userId);
 
-  return NextResponse.json({
-    success: true,
-  });
+    if (!userId || !body.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid request",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const item = await prisma.watchlist.findFirst({
+      where: {
+        id: body.id,
+        userId,
+      },
+    });
+
+    if (!item) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Watchlist not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    await prisma.watchlist.delete({
+      where: {
+        id: item.id,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || "Delete failed",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
 }
