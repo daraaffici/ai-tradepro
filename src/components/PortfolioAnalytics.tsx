@@ -14,6 +14,18 @@ type PerformanceItem = {
   profitPercent: number;
 };
 
+function getUserId() {
+  try {
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) return null;
+
+    const user = JSON.parse(savedUser);
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function PortfolioAnalytics() {
   const [items, setItems] = useState<Portfolio[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
@@ -21,23 +33,30 @@ export default function PortfolioAnalytics() {
   useEffect(() => {
     loadData();
 
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000);
-
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, []);
 
   async function loadData() {
-    const portfolioRes = await fetch("/api/portfolio", {
+    const userId = getUserId();
+
+    if (!userId) {
+      setItems([]);
+      setPrices({});
+      return;
+    }
+
+    const portfolioRes = await fetch(`/api/portfolio?userId=${userId}`, {
       cache: "no-store",
     });
 
     const portfolioData: Portfolio[] = await portfolioRes.json();
-    setItems(portfolioData);
+    const safeData = Array.isArray(portfolioData) ? portfolioData : [];
+
+    setItems(safeData);
 
     const uniqueSymbols = Array.from(
-      new Set(portfolioData.map((item) => item.symbol))
+      new Set(safeData.map((item) => item.symbol))
     );
 
     const priceMap: Record<string, number> = {};
@@ -56,16 +75,14 @@ export default function PortfolioAnalytics() {
 
   const totalValue = items.reduce((sum, item) => {
     const apiPrice = prices[item.symbol];
-    const currentPrice =
-      apiPrice && apiPrice > 0 ? apiPrice : item.buyPrice;
+    const currentPrice = apiPrice && apiPrice > 0 ? apiPrice : item.buyPrice;
 
     return sum + item.quantity * currentPrice;
   }, 0);
 
   const performances: PerformanceItem[] = items.map((item) => {
     const apiPrice = prices[item.symbol];
-    const currentPrice =
-      apiPrice && apiPrice > 0 ? apiPrice : item.buyPrice;
+    const currentPrice = apiPrice && apiPrice > 0 ? apiPrice : item.buyPrice;
 
     const profitPercent =
       item.buyPrice > 0
@@ -98,9 +115,7 @@ export default function PortfolioAnalytics() {
         <p className="text-[var(--muted)]">Total Portfolio Value</p>
 
         <h2 className="text-3xl font-bold mt-2">
-          ${totalValue.toLocaleString(undefined, {
-            maximumFractionDigits: 2,
-          })}
+          ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </h2>
       </div>
 

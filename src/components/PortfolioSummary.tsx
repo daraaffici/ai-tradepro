@@ -9,20 +9,42 @@ type Portfolio = {
   buyPrice: number;
 };
 
+function getUserId() {
+  try {
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) return null;
+
+    const user = JSON.parse(savedUser);
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function PortfolioSummary() {
   const [items, setItems] = useState<Portfolio[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
 
   async function loadData() {
-    const portfolioRes = await fetch("/api/portfolio", {
+    const userId = getUserId();
+
+    if (!userId) {
+      setItems([]);
+      setPrices({});
+      return;
+    }
+
+    const portfolioRes = await fetch(`/api/portfolio?userId=${userId}`, {
       cache: "no-store",
     });
 
     const portfolioData: Portfolio[] = await portfolioRes.json();
-    setItems(portfolioData);
+    const safeData = Array.isArray(portfolioData) ? portfolioData : [];
+
+    setItems(safeData);
 
     const uniqueSymbols = Array.from(
-      new Set(portfolioData.map((item) => item.symbol))
+      new Set(safeData.map((item) => item.symbol))
     );
 
     const priceMap: Record<string, number> = {};
@@ -33,7 +55,6 @@ export default function PortfolioSummary() {
       });
 
       const data = await res.json();
-
       priceMap[symbol] = Number(data.price || 0);
     }
 
@@ -43,10 +64,7 @@ export default function PortfolioSummary() {
   useEffect(() => {
     loadData();
 
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000);
-
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -61,7 +79,6 @@ export default function PortfolioSummary() {
   }, 0);
 
   const profit = currentValue - investedValue;
-
   const profitPercent =
     investedValue > 0 ? (profit / investedValue) * 100 : 0;
 
@@ -70,9 +87,7 @@ export default function PortfolioSummary() {
       <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
         <p className="text-[var(--muted)]">Portfolio Value</p>
         <h2 className="text-3xl font-bold mt-2">
-          ${currentValue.toLocaleString(undefined, {
-            maximumFractionDigits: 2,
-          })}
+          ${currentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </h2>
       </div>
 
@@ -83,7 +98,6 @@ export default function PortfolioSummary() {
 
       <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)]">
         <p className="text-[var(--muted)]">Profit / Loss</p>
-
         <h2
           className={`text-3xl font-bold mt-2 ${
             profit >= 0 ? "text-green-400" : "text-red-400"

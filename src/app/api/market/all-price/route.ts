@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 
-const cryptoSymbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+const cryptoSymbols = [
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "BNBUSDT",
+  "XRPUSDT",
+  "ADAUSDT",
+  "DOGEUSDT",
+  "AVAXUSDT",
+  "LINKUSDT",
+  "SUIUSDT",
+];
 
 const forexMap: Record<string, string> = {
   EURUSD: "OANDA:EUR_USD",
@@ -13,13 +24,24 @@ const goldMap: Record<string, string> = {
   XAGUSD: "OANDA:XAG_USD",
 };
 
-const stockSymbols = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "AMD"];
+const stockSymbols = [
+  "AAPL",
+  "TSLA",
+  "NVDA",
+  "MSFT",
+  "GOOGL",
+  "AMZN",
+  "META",
+  "AMD",
+];
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const symbol = url.searchParams.get("symbol") || "BTCUSDT";
-  const baseUrl = `${url.protocol}//${url.host}`;
+  const symbol = (url.searchParams.get("symbol") || "BTCUSDT")
+    .trim()
+    .toUpperCase();
 
+  const baseUrl = `${url.protocol}//${url.host}`;
   const finnhubKey = process.env.FINNHUB_API_KEY;
 
   try {
@@ -38,25 +60,29 @@ export async function GET(req: Request) {
       });
     }
 
-    if (!finnhubKey) {
-      return NextResponse.json({
-        symbol,
-        price: 0,
-        change: 0,
-        error: "Missing FINNHUB_API_KEY",
-      });
-    }
-
     const finnhubSymbol =
       forexMap[symbol] ||
       goldMap[symbol] ||
       (stockSymbols.includes(symbol) ? symbol : "");
 
     if (!finnhubSymbol) {
-      return NextResponse.json(
-        { error: "Symbol not supported", symbol },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        symbol,
+        price: 0,
+        change: 0,
+        source: "Unsupported",
+        message: "Symbol not supported",
+      });
+    }
+
+    if (!finnhubKey) {
+      return NextResponse.json({
+        symbol,
+        price: 0,
+        change: 0,
+        source: "Finnhub",
+        message: "Missing FINNHUB_API_KEY",
+      });
     }
 
     const res = await fetch(
@@ -73,15 +99,14 @@ export async function GET(req: Request) {
       price: Number(data.c || 0),
       change: Number(data.dp || 0),
       source: "Finnhub",
-      raw: data,
     });
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        error: "Failed to fetch price",
-        message: error.message,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      symbol,
+      price: 0,
+      change: 0,
+      source: "Fallback",
+      message: error.message || "Failed to fetch price",
+    });
   }
 }
