@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// user scoped trades API
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
