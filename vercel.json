@@ -11,10 +11,6 @@
     {
       "path": "/api/reports/monthly?secret=ai-tradepro-super-secret-2026",
       "schedule": "0 15 1 * *"
-    },
-    {
-      "path": "/api/news/sync?secret=aiTradePro2026SuperSecretNewsSync",
-      "schedule": "*/5 * * * *"
     }
   ]
 }
