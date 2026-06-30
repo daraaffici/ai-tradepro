@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/news/sync?secret=aiTradePro2026SuperSecretNewsSync",
-      "schedule": "*/0 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }

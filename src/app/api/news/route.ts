@@ -22,6 +22,7 @@ export async function GET(req: Request) {
 
     const sorted = news.sort((a, b) => {
       const byPriority = priorityRank(b.impact) - priorityRank(a.impact);
+
       if (byPriority !== 0) return byPriority;
 
       return (
@@ -33,7 +34,10 @@ export async function GET(req: Request) {
     return NextResponse.json(sorted);
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to load news" },
+      {
+        success: false,
+        error: error.message || "Failed to load news",
+      },
       { status: 500 }
     );
   }

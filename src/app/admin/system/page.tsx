@@ -22,6 +22,20 @@ type SystemData = {
   };
 };
 
+type NewsStatus = {
+  totalNews: number;
+  critical: number;
+  high: number;
+  medium: number;
+  telegramSent: number;
+  latest: {
+    title: string;
+    source: string;
+    impact: string;
+    publishedAt: string;
+  } | null;
+};
+
 function StatusCard({
   title,
   service,
@@ -52,11 +66,29 @@ export default function AdminSystemPage() {
   const [telegramStatus, setTelegramStatus] = useState("Checking...");
   const [telegramBot, setTelegramBot] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
+  const [newsStatus, setNewsStatus] = useState<NewsStatus | null>(null);
 
   useEffect(() => {
     loadSystem();
     loadTelegramStatus();
+    loadNewsStatus();
   }, []);
+
+  async function loadNewsStatus() {
+  try {
+    const res = await fetch("/api/admin/news/status", {
+      cache: "no-store",
+    });
+
+    const result = await res.json();
+
+    if (result.success) {
+      setNewsStatus(result);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
 
   async function loadSystem() {
     try {
@@ -99,7 +131,7 @@ export default function AdminSystemPage() {
   }
 
   async function refreshAll() {
-    await Promise.all([loadSystem(), loadTelegramStatus()]);
+    await Promise.all([loadSystem(), loadTelegramStatus(), loadNewsStatus()]);
   }
 
   async function sendTelegramTest() {
@@ -212,6 +244,49 @@ export default function AdminSystemPage() {
                   })}
                 </p>
               </>
+            )}
+
+            {newsStatus && (
+              <div className="bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] mt-6">
+                <h2 className="text-2xl font-bold mb-4">News Sync Status</h2>
+
+                <div className="grid md:grid-cols-5 gap-4">
+                  <div className="bg-[var(--input)] p-4 rounded-xl">
+                    <p className="text-[var(--muted)] text-sm">Total News</p>
+                    <p className="text-xl font-bold">{newsStatus.totalNews}</p>
+                  </div>
+
+                  <div className="bg-[var(--input)] p-4 rounded-xl">
+                    <p className="text-[var(--muted)] text-sm">Critical</p>
+                    <p className="text-xl font-bold text-red-400">{newsStatus.critical}</p>
+                  </div>
+
+                  <div className="bg-[var(--input)] p-4 rounded-xl">
+                    <p className="text-[var(--muted)] text-sm">High</p>
+                    <p className="text-xl font-bold text-orange-400">{newsStatus.high}</p>
+                  </div>
+
+                  <div className="bg-[var(--input)] p-4 rounded-xl">
+                    <p className="text-[var(--muted)] text-sm">Medium</p>
+                    <p className="text-xl font-bold text-yellow-400">{newsStatus.medium}</p>
+                  </div>
+
+                  <div className="bg-[var(--input)] p-4 rounded-xl">
+                    <p className="text-[var(--muted)] text-sm">Telegram Sent</p>
+                    <p className="text-xl font-bold text-green-400">{newsStatus.telegramSent}</p>
+                  </div>
+                </div>
+
+                {newsStatus.latest && (
+                  <div className="mt-4 bg-[var(--input)] p-4 rounded-xl">
+                    <p className="text-[var(--muted)] text-sm">Latest News</p>
+                    <p className="font-bold mt-1">{newsStatus.latest.title}</p>
+                    <p className="text-sm text-[var(--muted)] mt-1">
+                      {newsStatus.latest.source} • {newsStatus.latest.impact}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </main>
         </div>
