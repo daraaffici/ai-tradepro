@@ -58,9 +58,21 @@ export default function PerformancePage() {
     try {
       setLoading(true);
 
-      const res = await fetch(`/api/trades/stats?period=${period}`, {
-        cache: "no-store",
-      });
+      const savedUser = localStorage.getItem("user");
+
+      if (!savedUser) {
+        setStats(null);
+        return;
+      }
+
+      const user = JSON.parse(savedUser);
+
+      const res = await fetch(
+        `/api/trades/stats?period=${period}&userId=${user.id}`,
+        {
+          cache: "no-store",
+        }
+      );
 
       const data = await res.json();
 
