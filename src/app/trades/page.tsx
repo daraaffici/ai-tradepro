@@ -4,7 +4,6 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import TradeJournal from "@/components/TradeJournal";
 import AuthGuard from "@/components/AuthGuard";
-import PositionSizeCalculator from "@/components/PositionSizeCalculator";
 
 export default function TradesPage() {
   return (
@@ -25,7 +24,6 @@ export default function TradesPage() {
             Trade Journal
           </h1>
           
-          <PositionSizeCalculator />
           <TradeJournal />
         </main>
       </div>
