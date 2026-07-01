@@ -12,17 +12,37 @@ async function getPrice(baseUrl: string, symbol: string) {
   return Number(data.price || 0);
 }
 
-function calculateProfit(
-  type: string,
-  entry: number,
-  closePrice: number,
-  lotSize: number
-) {
-  if (type === "BUY") {
+function baseType(type: string) {
+  if (type.startsWith("BUY")) return "BUY";
+  if (type.startsWith("SELL")) return "SELL";
+  return type;
+}
+
+function isPendingType(type: string) {
+  return (
+    type === "BUY LIMIT" ||
+    type === "SELL LIMIT" ||
+    type === "BUY STOP" ||
+    type === "SELL STOP"
+  );
+}
+
+function shouldActivatePending(type: string, entry: number, price: number) {
+  if (type === "BUY LIMIT") return price <= entry;
+  if (type === "SELL LIMIT") return price >= entry;
+  if (type === "BUY STOP") return price >= entry;
+  if (type === "SELL STOP") return price <= entry;
+  return false;
+}
+
+function calculateProfit(type: string, entry: number, closePrice: number, lotSize: number) {
+  const side = baseType(type);
+
+  if (side === "BUY") {
     return Number(((closePrice - entry) * lotSize).toFixed(2));
   }
 
-  if (type === "SELL") {
+  if (side === "SELL") {
     return Number(((entry - closePrice) * lotSize).toFixed(2));
   }
 
@@ -46,8 +66,10 @@ export async function GET(req: Request) {
       return NextResponse.json({
         success: true,
         checked: 0,
+        activated: 0,
         updated: 0,
         skipped: 0,
+        activatedTrades: [],
         closedTrades: [],
       });
     }
@@ -57,23 +79,26 @@ export async function GET(req: Request) {
       select: { role: true, name: true, email: true },
     });
 
-    const openTrades = await prisma.trade.findMany({
+    const activeTrades = await prisma.trade.findMany({
       where: {
         userId,
-        status: "Open",
+        status: {
+          in: ["Pending", "Open"],
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
 
+    let activated = 0;
     let updated = 0;
     let skipped = 0;
+
+    const activatedTrades = [];
     const closedTrades = [];
 
-    for (const trade of openTrades) {
-      if (trade.type !== "BUY" && trade.type !== "SELL") {
-        skipped++;
-        continue;
-      }
-
+    for (const trade of activeTrades) {
       const currentPrice = await getPrice(baseUrl, trade.symbol);
 
       if (!currentPrice || currentPrice <= 0) {
@@ -81,14 +106,80 @@ export async function GET(req: Request) {
         continue;
       }
 
+      if (trade.status === "Pending") {
+        if (!isPendingType(trade.type)) {
+          skipped++;
+          continue;
+        }
+
+        const activate = shouldActivatePending(
+          trade.type,
+          trade.entry,
+          currentPrice
+        );
+
+        if (!activate) continue;
+
+        const openedType = baseType(trade.type);
+
+        const openedTrade = await prisma.trade.update({
+          where: { id: trade.id },
+          data: {
+            type: openedType,
+            status: "Open",
+            activatedAt: new Date(),
+            orderNote: `${trade.type} activated at ${currentPrice}`,
+          },
+        });
+
+        activated++;
+
+        activatedTrades.push({
+          id: openedTrade.id,
+          symbol: openedTrade.symbol,
+          type: openedTrade.type,
+          previousType: trade.type,
+          entry: openedTrade.entry,
+          activatedPrice: currentPrice,
+          lotSize: openedTrade.lotSize,
+        });
+
+        if (user?.role === "ADMIN") {
+          await sendTelegramMessage(
+            `✅ <b>ADMIN PENDING ORDER ACTIVATED</b>\n\n` +
+              `<b>Admin:</b> ${user.name || user.email}\n\n` +
+              `<b>Symbol:</b> ${trade.symbol}\n` +
+              `<b>Order:</b> ${trade.type}\n` +
+              `<b>Opened As:</b> ${openedType}\n\n` +
+              `<b>Entry:</b> $${formatMoney(trade.entry)}\n` +
+              `<b>Activated Price:</b> $${formatMoney(currentPrice)}\n` +
+              `<b>TP:</b> $${formatMoney(trade.takeProfit)}\n` +
+              `<b>SL:</b> $${formatMoney(trade.stopLoss)}\n` +
+              `<b>Lot:</b> ${trade.lotSize}\n\n` +
+              `<b>Activated:</b> ${formatCambodiaDateTime(new Date())}`
+          );
+        }
+
+        continue;
+      }
+
+      if (trade.status !== "Open") continue;
+
+      const side = baseType(trade.type);
+
+      if (side !== "BUY" && side !== "SELL") {
+        skipped++;
+        continue;
+      }
+
       let hitType: "TP" | "SL" | null = null;
 
-      if (trade.type === "BUY") {
+      if (side === "BUY") {
         if (currentPrice >= trade.takeProfit) hitType = "TP";
         if (currentPrice <= trade.stopLoss) hitType = "SL";
       }
 
-      if (trade.type === "SELL") {
+      if (side === "SELL") {
         if (currentPrice <= trade.takeProfit) hitType = "TP";
         if (currentPrice >= trade.stopLoss) hitType = "SL";
       }
@@ -96,7 +187,7 @@ export async function GET(req: Request) {
       if (!hitType) continue;
 
       const profit = calculateProfit(
-        trade.type,
+        side,
         trade.entry,
         currentPrice,
         trade.lotSize
@@ -105,9 +196,7 @@ export async function GET(req: Request) {
       const newStatus: "Win" | "Loss" = profit >= 0 ? "Win" : "Loss";
 
       await prisma.trade.update({
-        where: {
-          id: trade.id,
-        },
+        where: { id: trade.id },
         data: {
           status: newStatus,
           closePrice: currentPrice,
@@ -120,7 +209,7 @@ export async function GET(req: Request) {
       const closedTrade = {
         id: trade.id,
         symbol: trade.symbol,
-        type: trade.type,
+        type: side,
         status: newStatus,
         hitType,
         entry: trade.entry,
@@ -138,7 +227,7 @@ export async function GET(req: Request) {
           `${hitType === "TP" ? "🎯 <b>ADMIN TAKE PROFIT HIT</b>" : "🛑 <b>ADMIN STOP LOSS HIT</b>"}\n\n` +
             `<b>Admin:</b> ${user.name || user.email}\n\n` +
             `<b>Symbol:</b> ${trade.symbol}\n` +
-            `<b>Type:</b> ${trade.type}\n` +
+            `<b>Type:</b> ${side}\n` +
             `<b>Status:</b> ${newStatus}\n\n` +
             `<b>Entry:</b> $${formatMoney(trade.entry)}\n` +
             `<b>Close:</b> $${formatMoney(currentPrice)}\n` +
@@ -155,11 +244,13 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      checked: openTrades.length,
+      checked: activeTrades.length,
+      activated,
       updated,
       skipped,
+      activatedTrades,
       closedTrades,
-      telegramSent: user?.role === "ADMIN" && updated > 0,
+      telegramSent: user?.role === "ADMIN" && (activated > 0 || updated > 0),
     });
   } catch (error: any) {
     return NextResponse.json(

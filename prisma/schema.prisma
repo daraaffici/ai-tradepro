@@ -28,18 +28,21 @@ model Portfolio {
 }
 
 model Trade {
-  id        Int      @id @default(autoincrement())
-  symbol    String
-  type      String
-  entry     Float
-  takeProfit Float
-  stopLoss  Float
-  status    String   @default("Open")
-  userId    Int
-  createdAt DateTime @default(now())
-  lotSize    Float    @default(1)
-  closePrice Float?
-  profit     Float?
+  id          Int      @id @default(autoincrement())
+  symbol      String
+  type        String
+  entry       Float
+  takeProfit  Float
+  stopLoss    Float
+  status      String   @default("Open")
+  userId      Int
+  createdAt   DateTime @default(now())
+  lotSize     Float    @default(1)
+  closePrice  Float?
+  profit      Float?
+
+  activatedAt DateTime?
+  orderNote   String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

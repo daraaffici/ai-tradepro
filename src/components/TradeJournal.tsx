@@ -13,6 +13,8 @@ type Trade = {
   closePrice?: number | null;
   profit?: number | null;
   status: string;
+  orderNote?: string | null;
+  activatedAt?: string | null;
 };
 
 type User = {
@@ -34,7 +36,31 @@ const marketSymbols = [
   "AMD",
 ];
 
+const orderTypes = [
+  "BUY",
+  "SELL",
+  "BUY LIMIT",
+  "SELL LIMIT",
+  "BUY STOP",
+  "SELL STOP",
+];
+
 const lotSizes = ["0.01", "0.05", "0.10", "0.25", "0.50", "1", "2", "5", "10"];
+
+function baseType(type: string) {
+  if (type.startsWith("BUY")) return "BUY";
+  if (type.startsWith("SELL")) return "SELL";
+  return type;
+}
+
+function isPendingOrder(type: string) {
+  return (
+    type === "BUY LIMIT" ||
+    type === "SELL LIMIT" ||
+    type === "BUY STOP" ||
+    type === "SELL STOP"
+  );
+}
 
 export default function TradeJournal() {
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -64,7 +90,6 @@ export default function TradeJournal() {
 
   function getUser(): User | null {
     const savedUser = localStorage.getItem("user");
-
     if (!savedUser) return null;
 
     try {
@@ -87,9 +112,11 @@ export default function TradeJournal() {
     });
 
     const data: Trade[] = await res.json();
-    setTrades(Array.isArray(data) ? data : []);
+    const safeData = Array.isArray(data) ? data : [];
 
-    for (const trade of data) {
+    setTrades(safeData);
+
+    for (const trade of safeData) {
       loadPrice(trade.symbol);
     }
   }
@@ -110,7 +137,7 @@ export default function TradeJournal() {
           [selectedSymbol]: price,
         }));
 
-        if (selectedSymbol === symbol && !entry) {
+        if (selectedSymbol === symbol && !entry && !isPendingOrder(type)) {
           setEntry(price.toString());
         }
       }
@@ -127,7 +154,9 @@ export default function TradeJournal() {
   ) {
     if (!entryPrice || !currentPrice || !lot) return 0;
 
-    if (tradeType === "BUY") {
+    const side = baseType(tradeType);
+
+    if (side === "BUY") {
       return (currentPrice - entryPrice) * lot;
     }
 
@@ -166,7 +195,7 @@ export default function TradeJournal() {
     const data = await res.json();
 
     if (data.success) {
-      alert("Trade Added!");
+      alert(isPendingOrder(type) ? "Pending Order Added!" : "Trade Added!");
       setEntry("");
       setTakeProfit("");
       setStopLoss("");
@@ -236,7 +265,6 @@ export default function TradeJournal() {
   async function monitorTrades() {
     try {
       const user = getUser();
-
       if (!user?.id) return;
 
       const res = await fetch(`/api/trades/monitor?userId=${user.id}`, {
@@ -244,6 +272,12 @@ export default function TradeJournal() {
       });
 
       const data = await res.json();
+
+      if (data.success && data.activatedTrades?.length > 0) {
+        data.activatedTrades.forEach((trade: any) => {
+          alert(`✅ Pending Order Activated\n${trade.symbol}\n${trade.previousType}`);
+        });
+      }
 
       if (data.success && data.closedTrades?.length > 0) {
         data.closedTrades.forEach((trade: any) => {
@@ -275,8 +309,9 @@ export default function TradeJournal() {
 
     if (!matchesSearch) return false;
 
+    if (filter === "PENDING") return trade.status === "Pending";
     if (filter === "OPEN") return trade.status === "Open";
-    if (filter === "CLOSED") return trade.status !== "Open";
+    if (filter === "CLOSED") return trade.status !== "Open" && trade.status !== "Pending";
     if (filter === "WIN") return trade.status === "Win";
     if (filter === "LOSS") return trade.status === "Loss";
 
@@ -285,16 +320,16 @@ export default function TradeJournal() {
 
   return (
     <div className="bg-[var(--card)] mt-8 p-5 rounded-2xl border border-[var(--border)]">
-      <h2 className="text-xl font-bold mb-4">Trade Journal</h2>
+      <h2 className="text-xl font-bold mb-4">Trade Journal v2</h2>
 
-      <div className="grid md:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
         <select
           value={symbol}
           onChange={(e) => {
             setSymbol(e.target.value);
             setEntry("");
           }}
-          className="bg-[var(--input)] p-3 rounded-lg"
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
         >
           {marketSymbols.map((item) => (
             <option key={item} value={item}>
@@ -305,39 +340,49 @@ export default function TradeJournal() {
 
         <select
           value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="bg-[var(--input)] p-3 rounded-lg"
+          onChange={(e) => {
+            setType(e.target.value);
+            if (isPendingOrder(e.target.value)) setEntry("");
+          }}
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
         >
-          <option>BUY</option>
-          <option>SELL</option>
+          {orderTypes.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
         </select>
 
         <input
           value={entry}
           onChange={(e) => setEntry(e.target.value)}
-          placeholder="Entry"
-          className="bg-[var(--input)] p-3 rounded-lg"
+          placeholder={
+            isPendingOrder(type)
+              ? "Pending Entry Price"
+              : "Market Entry"
+          }
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
         />
 
         <input
           value={takeProfit}
           onChange={(e) => setTakeProfit(e.target.value)}
           placeholder="Take Profit"
-          className="bg-[var(--input)] p-3 rounded-lg"
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
         />
 
         <input
           value={stopLoss}
           onChange={(e) => setStopLoss(e.target.value)}
           placeholder="Stop Loss"
-          className="bg-[var(--input)] p-3 rounded-lg"
+          className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
         />
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <select
             value={lotSize}
             onChange={(e) => setLotSize(e.target.value)}
-            className="bg-[var(--input)] p-3 rounded-lg flex-1"
+            className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)] min-w-0 w-full"
           >
             {lotSizes.map((lot) => (
               <option key={lot} value={lot}>
@@ -352,10 +397,19 @@ export default function TradeJournal() {
             value={lotSize}
             onChange={(e) => setLotSize(e.target.value)}
             placeholder="Custom"
-            className="bg-[var(--input)] p-3 rounded-lg w-28"
+            className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)] min-w-0 w-full"
           />
         </div>
       </div>
+
+      {isPendingOrder(type) && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
+          <p className="text-yellow-400 font-bold">Pending Order Mode</p>
+          <p className="text-sm text-[var(--muted)] mt-1">
+            {type} will wait until market price reaches your entry price.
+          </p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         <div className="bg-[var(--input)] p-4 rounded-xl">
@@ -366,7 +420,9 @@ export default function TradeJournal() {
         </div>
 
         <div className="bg-[var(--input)] p-4 rounded-xl">
-          <p className="text-[var(--muted)] text-sm">Live P/L</p>
+          <p className="text-[var(--muted)] text-sm">
+            {isPendingOrder(type) ? "Estimated P/L After Entry" : "Live P/L"}
+          </p>
           <p
             className={
               formLiveProfit >= 0
@@ -379,16 +435,20 @@ export default function TradeJournal() {
         </div>
 
         <div className="bg-[var(--input)] p-4 rounded-xl">
-          <p className="text-[var(--muted)] text-sm">Selected Market</p>
-          <p className="text-xl font-bold">{symbol}</p>
+          <p className="text-[var(--muted)] text-sm">Order Type</p>
+          <p className="text-xl font-bold">{type}</p>
         </div>
       </div>
 
       <button
         onClick={addTrade}
-        className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg mb-6 text-white"
+        className={
+          isPendingOrder(type)
+            ? "bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg mb-6 text-white font-bold"
+            : "bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg mb-6 text-white font-bold"
+        }
       >
-        Add Trade
+        {isPendingOrder(type) ? "Add Pending Order" : "Add Market Trade"}
       </button>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
@@ -405,6 +465,7 @@ export default function TradeJournal() {
           className="bg-[var(--input)] p-3 rounded-lg border border-[var(--border)]"
         >
           <option value="ALL">All Trades</option>
+          <option value="PENDING">Pending Orders</option>
           <option value="OPEN">Open Trades</option>
           <option value="CLOSED">Closed Trades</option>
           <option value="WIN">Winning Trades</option>
@@ -419,12 +480,10 @@ export default function TradeJournal() {
           filteredTrades.map((trade) => {
             const tradeCurrentPrice = prices[trade.symbol] || 0;
 
-            const liveProfit = calcProfit(
-              trade.type,
-              trade.entry,
-              tradeCurrentPrice,
-              trade.lotSize
-            );
+            const liveProfit =
+              trade.status === "Pending"
+                ? 0
+                : calcProfit(trade.type, trade.entry, tradeCurrentPrice, trade.lotSize);
 
             const displayProfit =
               trade.status === "Open" ? liveProfit : trade.profit;
@@ -434,15 +493,15 @@ export default function TradeJournal() {
                 key={trade.id}
                 className="bg-[var(--input)] p-4 rounded-xl border border-[var(--border)]"
               >
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
                   <div>
-                    <p className="font-bold">{trade.symbol}</p>
+                    <p className="font-bold text-lg">{trade.symbol}</p>
 
                     <p
                       className={
-                        trade.type === "BUY"
-                          ? "text-green-400 text-sm"
-                          : "text-red-400 text-sm"
+                        baseType(trade.type) === "BUY"
+                          ? "text-green-400 text-sm font-bold"
+                          : "text-red-400 text-sm font-bold"
                       }
                     >
                       {trade.type}
@@ -456,14 +515,20 @@ export default function TradeJournal() {
                   <div className="flex items-center gap-4">
                     <span
                       className={
-                        trade.status === "Win"
-                          ? "text-green-400"
+                        trade.status === "Pending"
+                          ? "text-yellow-400 font-bold"
+                          : trade.status === "Win"
+                          ? "text-green-400 font-bold"
                           : trade.status === "Loss"
-                          ? "text-red-400"
-                          : "text-yellow-400"
+                          ? "text-red-400 font-bold"
+                          : "text-blue-400 font-bold"
                       }
                     >
-                      {trade.status}
+                      {trade.status === "Pending"
+                        ? "🟡 Pending"
+                        : trade.status === "Open"
+                        ? "🟢 Open"
+                        : trade.status}
                     </span>
 
                     <button
@@ -475,6 +540,20 @@ export default function TradeJournal() {
                   </div>
                 </div>
 
+                {trade.status === "Pending" && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mt-4">
+                    <p className="text-yellow-400 font-bold">
+                      Waiting for Entry: ${trade.entry.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-[var(--muted)] mt-1">
+                      Current Price:{" "}
+                      {tradeCurrentPrice
+                        ? `$${tradeCurrentPrice.toLocaleString()}`
+                        : "..."}
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-6 gap-4 mt-4">
                   <div>
                     <p className="text-[var(--muted)] text-sm">Entry</p>
@@ -482,9 +561,7 @@ export default function TradeJournal() {
                   </div>
 
                   <div>
-                    <p className="text-[var(--muted)] text-sm">
-                      Current Price
-                    </p>
+                    <p className="text-[var(--muted)] text-sm">Current</p>
                     <p>
                       {tradeCurrentPrice
                         ? `$${tradeCurrentPrice.toLocaleString()}`
@@ -528,7 +605,7 @@ export default function TradeJournal() {
                       }
                     >
                       {displayProfit !== null && displayProfit !== undefined
-                        ? `$${displayProfit.toFixed(2)}`
+                        ? `$${Number(displayProfit).toFixed(2)}`
                         : "-"}
                     </p>
                   </div>
