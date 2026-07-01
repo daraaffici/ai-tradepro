@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendTelegramMessage } from "@/lib/telegram";
-import { formatCambodiaDateTime } from "@/lib/cambodiaTime";
 
 async function getPrice(baseUrl: string, symbol: string) {
   const res = await fetch(`${baseUrl}/api/market/all-price?symbol=${symbol}`, {
@@ -29,24 +27,27 @@ function calculateProfit(
   return 0;
 }
 
-function formatMoney(value: number) {
-  return Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 export async function POST(req: Request) {
   try {
     const url = new URL(req.url);
     const baseUrl = `${url.protocol}//${url.host}`;
 
-    const { id, userId } = await req.json();
+    const body = await req.json();
+
+    const id = Number(body.id);
+    const userId = Number(body.userId);
+
+    if (!id || !userId) {
+      return NextResponse.json(
+        { success: false, error: "Invalid request" },
+        { status: 400 }
+      );
+    }
 
     const trade = await prisma.trade.findFirst({
-      where:{
-        id:Number(id),
-        userId:Number(userId),
+      where: {
+        id,
+        userId,
       },
     });
 
@@ -54,6 +55,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { success: false, error: "Trade not found" },
         { status: 404 }
+      );
+    }
+
+    if (trade.status !== "Open") {
+      return NextResponse.json(
+        { success: false, error: "Trade is already closed" },
+        { status: 400 }
       );
     }
 
@@ -76,29 +84,15 @@ export async function POST(req: Request) {
     const status = profit >= 0 ? "Win" : "Loss";
 
     const updatedTrade = await prisma.trade.update({
-      where: { id: trade.id },
+      where: {
+        id: trade.id,
+      },
       data: {
         status,
         closePrice: currentPrice,
         profit,
       },
     });
-
-    await sendTelegramMessage(
-      `🔒 <b>POSITION CLOSED MANUALLY</b>\n\n` +
-        `<b>Symbol:</b> ${trade.symbol}\n` +
-        `<b>Type:</b> ${trade.type}\n` +
-        `<b>Status:</b> ${status}\n\n` +
-        `<b>Entry:</b> $${formatMoney(trade.entry)}\n` +
-        `<b>Close:</b> $${formatMoney(currentPrice)}\n` +
-        `<b>TP:</b> $${formatMoney(trade.takeProfit)}\n` +
-        `<b>SL:</b> $${formatMoney(trade.stopLoss)}\n` +
-        `<b>Lot:</b> ${trade.lotSize}\n\n` +
-        `<b>Profit:</b> ${profit >= 0 ? "+" : "-"}$${formatMoney(
-          Math.abs(profit)
-        )}\n` +
-        `<b>Closed:</b> ${formatCambodiaDateTime(new Date())}`
-    );
 
     return NextResponse.json({
       success: true,
