@@ -24,6 +24,18 @@ type Stats = {
   worstTrade: TradeInfo | null;
 };
 
+function getUserId() {
+  try {
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) return null;
+
+    const user = JSON.parse(savedUser);
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function TradePerformance() {
   const [stats, setStats] = useState<Stats | null>(null);
 
@@ -32,7 +44,14 @@ export default function TradePerformance() {
   }, []);
 
   async function loadStats() {
-    const res = await fetch("/api/trades/stats", {
+    const userId = getUserId();
+
+    if (!userId) {
+      setStats(null);
+      return;
+    }
+
+    const res = await fetch(`/api/trades/stats?period=all&userId=${userId}`, {
       cache: "no-store",
     });
 
@@ -135,9 +154,7 @@ export default function TradePerformance() {
           <p className="text-[var(--muted)]">Best Trade</p>
           <h2 className="text-xl font-bold mt-2 text-green-400">
             {stats.bestTrade
-              ? `${stats.bestTrade.symbol} +$${stats.bestTrade.profit.toFixed(
-                  2
-                )}`
+              ? `${stats.bestTrade.symbol} ${stats.bestTrade.profit >= 0 ? "+" : ""}$${stats.bestTrade.profit.toFixed(2)}`
               : "-"}
           </h2>
         </div>
@@ -146,9 +163,7 @@ export default function TradePerformance() {
           <p className="text-[var(--muted)]">Worst Trade</p>
           <h2 className="text-xl font-bold mt-2 text-red-400">
             {stats.worstTrade
-              ? `${stats.worstTrade.symbol} $${stats.worstTrade.profit.toFixed(
-                  2
-                )}`
+              ? `${stats.worstTrade.symbol} $${stats.worstTrade.profit.toFixed(2)}`
               : "-"}
           </h2>
         </div>
