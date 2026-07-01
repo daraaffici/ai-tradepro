@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendTelegramMessage } from "@/lib/telegram";
+import { formatCambodiaDateTime } from "@/lib/cambodiaTime";
 
 async function getPrice(baseUrl: string, symbol: string) {
   const res = await fetch(`${baseUrl}/api/market/all-price?symbol=${symbol}`, {
@@ -27,11 +29,17 @@ function calculateProfit(
   return 0;
 }
 
+function formatMoney(value: number) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const baseUrl = `${url.protocol}//${url.host}`;
-
     const userId = Number(url.searchParams.get("userId"));
 
     if (!userId) {
@@ -43,6 +51,11 @@ export async function GET(req: Request) {
         closedTrades: [],
       });
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, name: true, email: true },
+    });
 
     const openTrades = await prisma.trade.findMany({
       where: {
@@ -104,7 +117,7 @@ export async function GET(req: Request) {
 
       updated++;
 
-      closedTrades.push({
+      const closedTrade = {
         id: trade.id,
         symbol: trade.symbol,
         type: trade.type,
@@ -116,7 +129,28 @@ export async function GET(req: Request) {
         closePrice: currentPrice,
         lotSize: trade.lotSize,
         profit,
-      });
+      };
+
+      closedTrades.push(closedTrade);
+
+      if (user?.role === "ADMIN") {
+        await sendTelegramMessage(
+          `${hitType === "TP" ? "🎯 <b>ADMIN TAKE PROFIT HIT</b>" : "🛑 <b>ADMIN STOP LOSS HIT</b>"}\n\n` +
+            `<b>Admin:</b> ${user.name || user.email}\n\n` +
+            `<b>Symbol:</b> ${trade.symbol}\n` +
+            `<b>Type:</b> ${trade.type}\n` +
+            `<b>Status:</b> ${newStatus}\n\n` +
+            `<b>Entry:</b> $${formatMoney(trade.entry)}\n` +
+            `<b>Close:</b> $${formatMoney(currentPrice)}\n` +
+            `<b>TP:</b> $${formatMoney(trade.takeProfit)}\n` +
+            `<b>SL:</b> $${formatMoney(trade.stopLoss)}\n` +
+            `<b>Lot:</b> ${trade.lotSize}\n\n` +
+            `<b>Profit:</b> ${profit >= 0 ? "+" : "-"}$${formatMoney(
+              Math.abs(profit)
+            )}\n` +
+            `<b>Closed:</b> ${formatCambodiaDateTime(new Date())}`
+        );
+      }
     }
 
     return NextResponse.json({
@@ -125,6 +159,7 @@ export async function GET(req: Request) {
       updated,
       skipped,
       closedTrades,
+      telegramSent: user?.role === "ADMIN" && updated > 0,
     });
   } catch (error: any) {
     return NextResponse.json(
